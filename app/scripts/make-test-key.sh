@@ -4,6 +4,10 @@
 # Run once on your own computer, from the repository folder. Needs keytool (any JDK) and gh (logged in).
 # This key never goes into the repository. It's separate from the Google Play upload key.
 set -euo pipefail
+for tool in keytool openssl gh; do
+  command -v "$tool" >/dev/null || { echo "Missing $tool. Install it first:"; echo "  Mint/Ubuntu: sudo apt install openjdk-21-jdk-headless openssl gh"; echo "  Fedora/Nobara: sudo dnf install java-21-openjdk-headless openssl gh"; exit 1; }
+done
+gh auth status >/dev/null 2>&1 || { echo "Log in to GitHub first: gh auth login"; exit 1; }
 REPO="${1:-OpenWorksIT/lineguard}"
 DIR=$(mktemp -d)
 trap 'rm -rf "$DIR"' EXIT

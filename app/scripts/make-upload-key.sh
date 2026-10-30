@@ -6,6 +6,10 @@
 # Keep the copy this script leaves in ~/lineguard-upload-key/ somewhere safe (e.g. your password manager):
 # if it's lost, Google can reset it, but that takes a support request.
 set -euo pipefail
+for tool in keytool openssl gh; do
+  command -v "$tool" >/dev/null || { echo "Missing $tool. Install it first:"; echo "  Mint/Ubuntu: sudo apt install openjdk-21-jdk-headless openssl gh"; echo "  Fedora/Nobara: sudo dnf install java-21-openjdk-headless openssl gh"; exit 1; }
+done
+gh auth status >/dev/null 2>&1 || { echo "Log in to GitHub first: gh auth login"; exit 1; }
 REPO="${1:-OpenWorksIT/lineguard}"
 OUT="$HOME/lineguard-upload-key"
 mkdir -p "$OUT"
