@@ -7,7 +7,7 @@
 # if it's lost, Google can reset it, but that takes a support request.
 set -euo pipefail
 for tool in keytool openssl gh; do
-  command -v "$tool" >/dev/null || { echo "Missing $tool. Install it first:"; echo "  Mint/Ubuntu: sudo apt install openjdk-21-jdk-headless openssl gh"; echo "  Fedora/Nobara: sudo dnf install java-21-openjdk-headless openssl gh"; exit 1; }
+  command -v "$tool" >/dev/null || { echo "Missing $tool. Install it first:"; echo "  Mint/Ubuntu: sudo apt install openjdk-21-jdk-headless openssl gh"; echo "  Fedora/Nobara: sudo dnf install java-latest-openjdk-headless openssl gh   (any JDK version works)"; exit 1; }
 done
 gh auth status >/dev/null 2>&1 || { echo "Log in to GitHub first: gh auth login"; exit 1; }
 REPO="${1:-OpenWorksIT/lineguard}"
