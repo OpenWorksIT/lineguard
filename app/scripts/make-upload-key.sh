@@ -14,11 +14,24 @@ REPO="${1:-OpenWorksIT/lineguard}"
 OUT="$HOME/lineguard-upload-key"
 mkdir -p "$OUT"
 chmod 700 "$OUT"
-PW=$(openssl rand -hex 24)
-keytool -genkeypair -keystore "$OUT/upload.keystore" -storetype PKCS12 -alias upload \
-  -keyalg RSA -keysize 4096 -validity 10000 -storepass "$PW" -keypass "$PW" \
-  -dname "CN=OpenWorks IT, O=OpenWorks IT (Pty) Ltd, C=ZA"
-printf %s "$PW" > "$OUT/password.txt"
+if [ -f "$OUT/upload.keystore" ]; then
+  # Never overwrite an upload key: once Google Play has seen it, it's the only one Play accepts.
+  if [ -f "$OUT/password.txt" ] && keytool -list -keystore "$OUT/upload.keystore" -storepass "$(cat "$OUT/password.txt")" >/dev/null 2>&1; then
+    echo "Using the existing upload key in $OUT."
+    PW=$(cat "$OUT/password.txt")
+  else
+    echo "There's already a file at $OUT/upload.keystore, but no matching password.txt for it."
+    echo "If you haven't uploaded anything to Google Play yet, delete the folder and run this again:"
+    echo "  rm -rf $OUT"
+    exit 1
+  fi
+else
+  PW=$(openssl rand -hex 24)
+  keytool -genkeypair -keystore "$OUT/upload.keystore" -storetype PKCS12 -alias upload \
+    -keyalg RSA -keysize 4096 -validity 10000 -storepass "$PW" -keypass "$PW" \
+    -dname "CN=OpenWorks IT, O=OpenWorks IT (Pty) Ltd, C=ZA"
+  printf %s "$PW" > "$OUT/password.txt"
+fi
 chmod 600 "$OUT"/*
 base64 -w0 "$OUT/upload.keystore" | gh secret set LINEGUARD_UPLOAD_KEYSTORE_B64 --env store -R "$REPO"
 printf %s "$PW" | gh secret set LINEGUARD_KEYSTORE_PASSWORD --env store -R "$REPO"
