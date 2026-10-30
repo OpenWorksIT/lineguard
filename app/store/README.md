@@ -148,6 +148,7 @@ No sign-in details are needed. If a reviewer asks to see pairing, show a code on
 ## Google Play: App content answers
 
 - **Ads:** No.
+- **Advertising ID:** No. The built app has no `AD_ID` permission; its permissions are location, internet, network state and vibrate, plus two that Android uses to protect background job services.
 - **Content rating (IARC questionnaire):** Category *Utility, Productivity, Communication or Other*. Answer No to violence, sexuality, language, controlled substances, gambling and user-to-user communication. Answer No to sharing location with other users: location is only shown to the user. Expected result: Everyone / PEGI 3.
 - **Target audience:** 18 and over. It's a work tool; this keeps it out of the Families programme.
 - **News app:** No. **COVID-19 app:** No. **Government app:** No.
