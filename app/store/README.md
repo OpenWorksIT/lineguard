@@ -26,7 +26,13 @@ app/scripts/make-upload-key.sh   # Google Play upload key; keeps a copy in ~/lin
 
 No key is kept in the repository. Until `make-test-key.sh` has run, test APKs are signed with a one-off key, so each one must be uninstalled before the next is installed.
 
-For iOS, create an **App Store Connect API key**: Users and Access → Integrations → App Store Connect API, role **Admin**. Then add four repository secrets: `APPLE_TEAM_ID`, `ASC_KEY_ID`, `ASC_ISSUER_ID`, and `ASC_KEY_P8_B64` (the result of `base64 -w0 AuthKey_XXXX.p8`). Xcode creates the certificates and profiles itself.
+For iOS, add five secrets to the `store` environment:
+
+- `APPLE_TEAM_ID`, `ASC_KEY_ID` and `ASC_ISSUER_ID`, from an **App Store Connect API key** (Users and Access → Integrations → Team Keys, role Admin).
+- `ASC_KEY_P8_B64`: the key file, encoded with `base64 -w0 AuthKey_XXXX.p8`.
+- `IOS_CERT_KEY`: the RSA private key of the App Store distribution certificate, as PEM text. Use the same key as another app on the team to share its certificate, or make a new one with `openssl genrsa -out ios_cert_key.pem 2048`.
+
+The build fetches, or creates, the distribution certificate and App Store profile through the API. No registered iPhone is needed.
 
 ## 3. Build
 

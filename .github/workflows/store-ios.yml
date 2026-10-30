@@ -1,14 +1,20 @@
 name: iOS store build
 
-# Archives the iPhone app, signs it and uploads it to App Store Connect (TestFlight),
+# Builds the iPhone app, signs it for the App Store and uploads it to App Store Connect (TestFlight),
 # from where it can be submitted for App Store review.
-# Run it from the Actions tab ("Run workflow"). Needs these repository secrets:
+#
+# Signing uses an App Store distribution certificate and profile fetched (or created) through the
+# App Store Connect API with Codemagic's CLI tools (GPL-3.0), the same way as Steady. No registered
+# iPhone is needed.
+#
+# Secrets, in the "store" environment (Settings > Environments > store):
 #   APPLE_TEAM_ID        the 10-character Team ID from developer.apple.com > Membership
-#   ASC_KEY_ID           an App Store Connect API key's Key ID (Users and Access > Integrations, role Admin)
+#   ASC_KEY_ID           an App Store Connect API key's Key ID (Users and Access > Integrations)
 #   ASC_ISSUER_ID        the Issuer ID shown on that page
 #   ASC_KEY_P8_B64       the downloaded AuthKey_XXXX.p8 file, base64 encoded
-# Xcode uses the API key to create the signing certificate and profile itself (automatic signing),
-# so no certificates need to be exported by hand.
+#   IOS_CERT_KEY         the RSA private key of the distribution certificate (PEM text). Use the same
+#                        key as Steady's IOS_CERT_KEY to share its certificate, or a new one from
+#                        `openssl genrsa 2048`, and a certificate is created for it.
 
 on:
   workflow_dispatch:
@@ -18,10 +24,16 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: store-ios
+  cancel-in-progress: false
+
 jobs:
   testflight:
     environment: store   # secrets live in this environment, which needs your approval to run
-    runs-on: macos-latest
+    # Xcode 26 / iOS 26 SDK: required for App Store Connect uploads
+    runs-on: macos-26
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: app
@@ -37,70 +49,101 @@ jobs:
       - run: npm ci --ignore-scripts   # no package needs install scripts to build the app
       - run: npm run build
       - run: npx cap sync ios
+
       - name: Check the secrets
         env:
           TEAM: ${{ secrets.APPLE_TEAM_ID }}
           KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ISSUER: ${{ secrets.ASC_ISSUER_ID }}
           P8: ${{ secrets.ASC_KEY_P8_B64 }}
+          CERT_KEY: ${{ secrets.IOS_CERT_KEY }}
         run: |
-          for v in TEAM KEY_ID ISSUER P8; do
-            if [ -z "${!v}" ]; then echo "::error title=Missing secret::See the list at the top of store-ios.yml"; exit 1; fi
-          done
-          mkdir -p "$RUNNER_TEMP/keys"
-          echo "$P8" | base64 -d > "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8"
-      - name: Archive
-        working-directory: app/ios/App
+          # the shape of each secret, without showing it, so a typo is named rather than a bare 401
+          bad=""
+          printf '%s' "$TEAM" | grep -Eq '^[A-Z0-9]{10}$' || bad="$bad APPLE_TEAM_ID (10 letters/digits);"
+          printf '%s' "$KEY_ID" | grep -Eq '^[A-Z0-9]{10}$' || bad="$bad ASC_KEY_ID (10 letters/digits);"
+          printf '%s' "$ISSUER" | grep -Eq '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' || bad="$bad ASC_ISSUER_ID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx);"
+          printf '%s' "$P8" | base64 -d 2>/dev/null | grep -q 'BEGIN PRIVATE KEY' || bad="$bad ASC_KEY_P8_B64 (base64 of the whole .p8 file);"
+          printf '%s' "$CERT_KEY" | grep -q 'PRIVATE KEY-----' || bad="$bad IOS_CERT_KEY (the whole RSA key file, BEGIN and END lines included);"
+          [ -z "$bad" ] || { echo "::error title=Store secrets::Check:$bad"; exit 1; }
+          echo "::notice title=Store secrets::All five look the right shape (key ID ends ${KEY_ID: -2})"
+
+      - name: Signing files
         env:
-          TEAM: ${{ secrets.APPLE_TEAM_ID }}
-          KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.ASC_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          P8: ${{ secrets.ASC_KEY_P8_B64 }}
+          CERT_KEY: ${{ secrets.IOS_CERT_KEY }}
+        run: |
+          # each command's own message goes onto the run page if it fails
+          run() {
+            "$@" > "$RUNNER_TEMP/step.txt" 2>&1 && { cat "$RUNNER_TEMP/step.txt"; return 0; }
+            cat "$RUNNER_TEMP/step.txt"
+            echo "::error title=$1 $2::$(sed 's/%/%25/g' "$RUNNER_TEMP/step.txt" | tail -c 6000 | awk '{printf "%s%%0A", $0}')"
+            exit 1
+          }
+          export APP_STORE_CONNECT_PRIVATE_KEY="$(printf '%s' "$P8" | base64 -d)"
+          # the tools want a traditional "BEGIN RSA PRIVATE KEY" PEM; openssl genrsa on Linux writes
+          # the newer PKCS#8 form, so convert whichever was given
+          key=$(mktemp)
+          printf '%s\n' "$CERT_KEY" > "$key"
+          if ! grep -q 'BEGIN RSA PRIVATE KEY' "$key"; then
+            /usr/bin/openssl rsa -in "$key" -out "$key.rsa" 2>/dev/null || openssl rsa -in "$key" -traditional -out "$key.rsa"
+            grep -q 'BEGIN RSA PRIVATE KEY' "$key.rsa" || { echo "::error title=IOS_CERT_KEY::Couldn't read IOS_CERT_KEY as an RSA private key."; exit 1; }
+            export CERTIFICATE_PRIVATE_KEY="$(cat "$key.rsa")"
+          else
+            export CERTIFICATE_PRIVATE_KEY="$(cat "$key")"
+          fi
+          rm -f "$key" "$key.rsa"
+          run pipx install codemagic-cli-tools==0.70.2
+          run keychain initialize
+          run app-store-connect fetch-signing-files za.co.openworks.lineguard --type IOS_APP_STORE --create
+          run keychain add-certificates
+          # sets the App target to the fetched profile and writes ~/export_options.plist
+          run xcode-project use-profiles --project ios/App/App.xcodeproj
+
+      - name: Build and sign
+        working-directory: app/ios/App
         run: |
           set -o pipefail
-          # On failure, put xcodebuild's own error lines in an annotation (readable without the full log).
           report() {
-            msg=$(grep -E "error:|\*\* (ARCHIVE|EXPORT) FAILED|No profiles|No signing|provisioning profile|No Accounts|requires a development team|Code Signing Error|exportArchive" "$1" | sort -u | head -25 | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}')
+            msg=$(grep -E "error:|\*\* (ARCHIVE|EXPORT) FAILED|No profiles|No signing|provisioning profile|Code Signing Error" "$1" | sort -u | head -25 | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}')
             [ -n "$msg" ] || msg=$(tail -30 "$1" | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}')
             echo "::error title=$2::${msg}"
           }
           VERSION=$(node -p "require('../../package.json').version")
           if ! xcodebuild -workspace App.xcworkspace -scheme App -configuration Release \
             -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/LineGuard.xcarchive" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8" \
-            -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER" \
-            DEVELOPMENT_TEAM="$TEAM" CODE_SIGN_STYLE=Automatic \
             MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}" \
             archive > "$RUNNER_TEMP/archive.log" 2>&1; then
             report "$RUNNER_TEMP/archive.log" "Archive failed"
             exit 1
           fi
-          tail -20 "$RUNNER_TEMP/archive.log"
-      - name: Sign and upload to App Store Connect
-        working-directory: app/ios/App
-        env:
-          TEAM: ${{ secrets.APPLE_TEAM_ID }}
-          KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ISSUER: ${{ secrets.ASC_ISSUER_ID }}
-        run: |
-          set -o pipefail
-          # On failure, put xcodebuild's own error lines in an annotation (readable without the full log).
-          report() {
-            msg=$(grep -E "error:|\*\* (ARCHIVE|EXPORT) FAILED|No profiles|No signing|provisioning profile|No Accounts|requires a development team|Code Signing Error|exportArchive" "$1" | sort -u | head -25 | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}')
-            [ -n "$msg" ] || msg=$(tail -30 "$1" | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}')
-            echo "::error title=$2::${msg}"
-          }
-          sed "s/TEAM_ID_HERE/$TEAM/" ../ExportOptions.plist > "$RUNNER_TEMP/ExportOptions.plist"
+          tail -5 "$RUNNER_TEMP/archive.log"
           if ! xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/LineGuard.xcarchive" \
-            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8" \
-            -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER" > "$RUNNER_TEMP/export.log" 2>&1; then
-            report "$RUNNER_TEMP/export.log" "Signing or upload failed"
+            -exportOptionsPlist "$HOME/export_options.plist" -exportPath "$RUNNER_TEMP/export" \
+            > "$RUNNER_TEMP/export.log" 2>&1; then
+            report "$RUNNER_TEMP/export.log" "Export failed"
             exit 1
           fi
-          tail -20 "$RUNNER_TEMP/export.log"
-          echo "Uploaded build ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} to App Store Connect. It appears in TestFlight after Apple's processing (usually 10-30 minutes)." >> "$GITHUB_STEP_SUMMARY"
-      - name: Remove the key
+          ls -l "$RUNNER_TEMP/export"
+
+      - name: Upload to App Store Connect
+        env:
+          APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.ASC_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          P8: ${{ secrets.ASC_KEY_P8_B64 }}
+        run: |
+          export APP_STORE_CONNECT_PRIVATE_KEY="$(printf '%s' "$P8" | base64 -d)"
+          ipa=$(find "$RUNNER_TEMP/export" -name '*.ipa' | head -1)
+          if ! app-store-connect publish --path "$ipa" > "$RUNNER_TEMP/publish.txt" 2>&1; then
+            cat "$RUNNER_TEMP/publish.txt"
+            echo "::error title=Upload failed::$(sed 's/%/%25/g' "$RUNNER_TEMP/publish.txt" | tail -c 6000 | awk '{printf "%s%%0A", $0}')"
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/publish.txt"
+          echo "::notice title=TestFlight::Uploaded build ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}. Apple takes 10-30 minutes to process it."
+
+      - name: Remove signing material
         if: always()
-        run: rm -rf "$RUNNER_TEMP/keys"
+        run: keychain clean > /dev/null 2>&1 || true
