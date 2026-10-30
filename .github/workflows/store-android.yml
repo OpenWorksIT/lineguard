@@ -1,0 +1,105 @@
+name: Android store build
+
+# Builds a signed Android App Bundle (.aab) for Google Play.
+# Run it from the Actions tab ("Run workflow"). Needs these repository secrets:
+#   LINEGUARD_UPLOAD_KEYSTORE_B64   the upload keystore, base64 encoded (see app/store/README.md)
+#   LINEGUARD_KEYSTORE_PASSWORD     its store password
+#   LINEGUARD_KEY_ALIAS             the key alias (e.g. "upload")
+#   LINEGUARD_KEY_PASSWORD          the key password
+# Optional, to upload straight to Google Play (after the first upload has been done by hand):
+#   PLAY_SERVICE_ACCOUNT_JSON       a Google Cloud service account key with release access in Play Console
+
+on:
+  workflow_dispatch:
+    inputs:
+      track:
+        description: "Google Play track to upload to (only if PLAY_SERVICE_ACCOUNT_JSON is set)"
+        type: choice
+        options: [internal, alpha, beta, production]
+        default: internal
+  push:
+    tags: ["v*"]      # pushing a release tag (e.g. v0.3.0) builds and uploads both store apps
+
+permissions:
+  contents: read
+
+jobs:
+  aab:
+    environment: store   # secrets live in this environment, which needs your approval to run
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09  # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444  # v5.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961  # v5.7.0
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Accept Android SDK licences
+        run: |
+          SDKM=$(ls "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | head -1)
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" --install "platforms;android-36" "build-tools;36.0.0" > /dev/null || echo "::warning::could not preinstall SDK 36"
+      - name: Version code
+        # Play needs a version code that goes up with every upload: the date and hour (yymmddHH),
+        # the same scheme as app/scripts/build-play-bundle.sh, so local and CI builds stay in order.
+        run: echo "LINEGUARD_VERSION_CODE=$(date -u +%y%m%d%H)" >> "$GITHUB_ENV"
+      - run: npm ci --ignore-scripts   # no package needs install scripts to build the app
+      - run: npm run build
+      - run: npx cap sync android
+      - name: Restore the upload key
+        env:
+          KEYSTORE_B64: ${{ secrets.LINEGUARD_UPLOAD_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::error title=No upload key::Add the LINEGUARD_UPLOAD_KEYSTORE_B64 secret (see app/store/README.md)."
+            exit 1
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload.keystore"
+          echo "LINEGUARD_KEYSTORE=$RUNNER_TEMP/upload.keystore" >> "$GITHUB_ENV"
+      - name: Build the signed App Bundle
+        working-directory: app/android
+        env:
+          LINEGUARD_KEYSTORE_PASSWORD: ${{ secrets.LINEGUARD_KEYSTORE_PASSWORD }}
+          LINEGUARD_KEY_ALIAS: ${{ secrets.LINEGUARD_KEY_ALIAS }}
+          LINEGUARD_KEY_PASSWORD: ${{ secrets.LINEGUARD_KEY_PASSWORD }}
+        run: |
+          set -o pipefail
+          if ! ./gradlew --no-daemon bundleRelease 2>&1 | tee gradle.log; then
+            msg=$( (grep -A25 "What went wrong" gradle.log || tail -40 gradle.log) | head -40 | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}')
+            echo "::error title=Gradle build failed::${msg}"
+            exit 1
+          fi
+      - name: Name the bundle
+        run: |
+          mkdir -p out
+          VERSION=$(node -p "require('./package.json').version")
+          cp android/app/build/outputs/bundle/release/app-release.aab "out/LineGuard-${VERSION}-${LINEGUARD_VERSION_CODE}.aab"
+          echo "Version ${VERSION}, version code ${LINEGUARD_VERSION_CODE}" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f  # v6.0.0
+        with:
+          name: LineGuard-play-bundle
+          path: app/out/*.aab
+          retention-days: 3
+      - name: Check for a Play upload key
+        id: play
+        env:
+          PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: echo "upload=$([ -n "$PLAY_JSON" ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+      - name: Upload to Google Play
+        if: steps.play.outputs.upload == 'yes'
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5  # v1.1.5
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: za.co.openworks.lineguard
+          releaseFiles: app/out/*.aab
+          track: ${{ inputs.track || 'internal' }}
+          status: draft

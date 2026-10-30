@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>LineGuard report: {{ flight.name }}</title>
+<style>
+  @page { size: A4; margin: 14mm; }
+  body { font-family: system-ui, "Segoe UI", Roboto, Ubuntu, sans-serif; color: #15203a; margin: 0 auto; max-width: 190mm; font-size: 10.5pt; }
+  header { display: flex; align-items: center; gap: 14px; border-bottom: 3px solid #1d3f8c; padding-bottom: 8px; }
+  header img { width: 64px; }
+  header h1 { margin: 0; font-size: 18pt; color: #1d3f8c; }
+  header p { margin: 2px 0 0; color: #55607a; }
+  .summary { display: flex; gap: 22px; margin: 12px 0 14px; }
+  .summary div { font-size: 10pt; color: #55607a; }
+  .summary b { display: block; font-size: 18pt; color: #15203a; }
+  .summary .major b { color: #c8281e; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 9pt; color: #55607a; border-bottom: 1px solid #b9c2d1; padding: 4px; }
+  td { border-bottom: 1px solid #d5dce7; padding: 6px 4px; vertical-align: top; }
+  tr { break-inside: avoid; }
+  .id { font-weight: 700; white-space: nowrap; }
+  .dt { font-size: 13pt; font-weight: 800; white-space: nowrap; }
+  .sev { font-size: 9pt; font-weight: 700; }
+  .sev.major { color: #c8281e; } .sev.probable { color: #b45309; } .sev.possible { color: #8a6a00; }
+  .coords { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 9.5pt; }
+  td img.crop { width: 34mm; display: block; border-radius: 3px; }
+  td svg { width: 24mm; height: 24mm; }
+  .sign { width: 30mm; color: #55607a; font-size: 8.5pt; line-height: 2.2; }
+  .print { position: fixed; top: 10px; right: 10px; }
+  @media print { .print { display: none; } }
+  footer { margin-top: 12px; color: #55607a; font-size: 8.5pt; }
+</style>
+</head>
+<body>
+<button class="print" id="print">Print or save as PDF</button>
+<header>
+  <img src="/static/logo-mark.svg" alt="">
+  <div>
+    <h1>LineGuard inspection report</h1>
+    <p>{{ flight.name }}{% if flight.flown %}, flown {{ flight.flown }}{% endif %}. {{ flight.photos }} photos processed.</p>
+  </div>
+</header>
+<div class="summary">
+  <div class="major"><b>{{ counts.major }}</b>major (over 15 °C)</div>
+  <div><b>{{ counts.probable }}</b>probable (4 to 15 °C)</div>
+  <div><b>{{ counts.possible }}</b>possible (under 4 °C)</div>
+</div>
+{% if hotspots %}
+<table>
+  <thead><tr><th>Hotspot</th><th>Rise</th><th>Thermal close-up</th><th>Location</th><th>Scan to navigate</th><th>On site</th></tr></thead>
+  <tbody>
+  {% for h in hotspots %}
+  <tr>
+    <td class="id">LG-{{ h.id }}{% if h.status == 'repaired' %}<br><small>Repaired</small>{% endif %}</td>
+    <td><span class="dt">+{{ '%.1f' % h.dt }} °C</span><br><span class="sev {{ h.severity }}">{{ h.severity|capitalize }}</span>
+      {% if h.prev_dt is not none %}<br><small>Earlier flight: +{{ '%.1f' % h.prev_dt }} °C</small>{% endif %}</td>
+    <td><img class="crop" src="/crops/{{ h.thermal_crop }}" alt="">{% if h.colour_crop %}<img class="crop" src="/crops/{{ h.colour_crop }}" alt="" style="margin-top:2mm">{% endif %}</td>
+    <td class="coords">{% if h.where %}<b>{{ h.where }}</b><br>{% endif %}{{ '%.7f' % h.lat }}<br>{{ '%.7f' % h.lon }}<br><small>Seen in {{ h.photos }} of {{ h.seen }} photos</small>{% if h.note %}<br><small>{{ h.note }}</small>{% endif %}</td>
+    <td>{{ h.qr|safe }}</td>
+    <td class="sign">Repaired ☐<br>Date ________<br>Initials ______</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No hotspots found on this flight.</p>
+{% endif %}
+<footer>Temperature rise is measured against the same point on the other phases, and graded on NETA similar-component bands. Confirm each fault on site before repair. LineGuard {{ version }}, OpenWorks IT.</footer>
+<script src="/static/report.js"></script>
+</body>
+</html>

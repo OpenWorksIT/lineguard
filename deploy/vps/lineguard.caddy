@@ -1,0 +1,46 @@
+# LineGuard behind an existing Caddy. Copy into the folder your Caddyfile imports (e.g. sites/*.caddy)
+# and change the host name to yours.
+lineguard.example.com {
+	encode gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		X-Robots-Tag "noindex, nofollow"
+		-Server
+	}
+
+	# Flight uploads are large, so they get a big body limit, but only after LineGuard has checked
+	# the login: nobody can push gigabytes at the server without the password.
+	@upload path /api/upload
+	handle @upload {
+		forward_auth lineguard-app:8750 {
+			uri /api/authcheck
+		}
+		request_body {
+			max_size 4GB
+		}
+		reverse_proxy lineguard-app:8750 {
+			transport http {
+				read_timeout 30m
+				write_timeout 30m
+			}
+		}
+	}
+
+	# Everything else is small (tower files are at most 20 MB).
+	handle {
+		request_body {
+			max_size 25MB
+		}
+		reverse_proxy lineguard-app:8750
+	}
+
+	handle_errors {
+		@down expression {err.status_code} in [502, 503, 504]
+		handle @down {
+			respond "LineGuard is restarting. Please try again in a minute." 503
+		}
+	}
+}

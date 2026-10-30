@@ -1,0 +1,14 @@
+{
+  "appId": "za.co.openworks.lineguard",
+  "appName": "LineGuard",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": false
+    }
+  }
+}

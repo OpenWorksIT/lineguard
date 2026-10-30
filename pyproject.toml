@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lineguard"
+version = "0.3.0"
+description = "LineGuard: finds and maps hotspots on powerlines from radiometric drone photos. Runs offline."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "OpenWorks IT (Pty) Ltd" }]
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "Pillow>=13.0.0",
+    "Flask>=3.0",
+    "waitress>=3.0",
+    "segno>=1.5",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[project.scripts]
+lineguard = "lineguard.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["lineguard*"]
+
+[tool.setuptools.package-data]
+lineguard = ["templates/*.html", "static/*", "static/vendor/leaflet/*", "static/vendor/leaflet/images/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

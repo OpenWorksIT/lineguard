@@ -1,0 +1,16 @@
+# systemd user unit. `lineguard install-service` writes and enables this for you.
+# Manual install:
+#   cp lineguard.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now lineguard
+#   loginctl enable-linger $USER     # keep it running when nobody is logged in
+[Unit]
+Description=LineGuard thermal inspection service
+After=network.target
+
+[Service]
+ExecStart=%h/.local/bin/lineguard serve
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

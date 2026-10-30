@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 300" role="img" aria-label="LineGuard: thermal imaging software for powerlines">
+  <g transform="translate(181 4) scale(1.42)">
+  <defs>
+    <radialGradient id="lg-heat" cx="62%" cy="58%" r="62%">
+      <stop offset="0" stop-color="#fff4b8"/>
+      <stop offset="0.28" stop-color="#ffc233"/>
+      <stop offset="0.62" stop-color="#f7801f"/>
+      <stop offset="1" stop-color="#d93a2b"/>
+    </radialGradient>
+    <radialGradient id="lg-spot" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.35" stop-color="#fff6a8"/>
+      <stop offset="1" stop-color="#ffd23f" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="lg-disc"><circle cx="58" cy="66" r="50"/></clipPath>
+  </defs>
+  <circle cx="58" cy="66" r="50" fill="url(#lg-heat)"/>
+  <g clip-path="url(#lg-disc)" fill="none" stroke="#6b1414" stroke-linecap="round" stroke-linejoin="round">
+    <!-- conductors -->
+    <path d="M2 50 Q30 56 34 52 M82 52 Q86 56 114 50" stroke-width="2"/>
+    <path d="M2 68 Q30 74 38 70 M78 70 Q86 74 114 68" stroke-width="2"/>
+    <!-- tower legs and peak -->
+    <path d="M44 118 L54 30 L58 20 L62 30 L72 118" stroke-width="3.2"/>
+    <!-- cross-arms -->
+    <path d="M34 52 H82 M38 70 H78" stroke-width="3"/>
+    <path d="M34 52 L54 40 M82 52 L62 40 M38 70 L52 60 M78 70 L64 60" stroke-width="1.8"/>
+    <!-- lattice -->
+    <path d="M54 30 L62 40 M62 30 L54 40 M54 40 L62 52 M62 40 L54 52 M53 52 L63 70 M63 52 L53 70 M51 70 L65 92 M65 70 L51 92 M49 92 L68 118 M67 92 L47 118" stroke-width="1.4"/>
+    <path d="M51 92 H65" stroke-width="1.6"/>
+  </g>
+  <!-- the hotspot on a joint -->
+  <circle cx="92" cy="70" r="13" fill="url(#lg-spot)"/>
+  <circle cx="92" cy="70" r="3.2" fill="#ffffff"/>
+  <circle cx="58" cy="66" r="50" fill="none" stroke="#1d3f8c" stroke-width="6"/>
+  <!-- drone, seen from above -->
+  <g transform="translate(116 28) rotate(20)">
+    <g stroke="#1d3f8c" stroke-width="4.5" stroke-linecap="round">
+      <path d="M-15 -15 L15 15 M15 -15 L-15 15"/>
+    </g>
+    <g fill="#ffffff" fill-opacity="0.85" stroke="#1d3f8c" stroke-width="3">
+      <circle cx="-17" cy="-17" r="9"/><circle cx="17" cy="-17" r="9"/>
+      <circle cx="-17" cy="17" r="9"/><circle cx="17" cy="17" r="9"/>
+    </g>
+    <g fill="#1d3f8c">
+      <circle cx="-17" cy="-17" r="2.4"/><circle cx="17" cy="-17" r="2.4"/>
+      <circle cx="-17" cy="17" r="2.4"/><circle cx="17" cy="17" r="2.4"/>
+      <rect x="-8" y="-9" width="16" height="18" rx="5"/>
+    </g>
+    <circle cx="0" cy="4" r="2.6" fill="#ffc233"/>
+  </g>
+  </g>
+  <text x="280" y="246" text-anchor="middle" font-family="Montserrat, Poppins, 'Segoe UI', 'DejaVu Sans', Arial, sans-serif" font-size="74" font-weight="800" letter-spacing="-1" fill="#1d3f8c">LineGuard</text>
+  <text x="280" y="282" text-anchor="middle" font-family="Montserrat, Poppins, 'Segoe UI', 'DejaVu Sans', Arial, sans-serif" font-size="17" font-weight="700" letter-spacing="2.2" fill="#1d3f8c">THERMAL IMAGING SOFTWARE FOR POWERLINES</text>
+</svg>

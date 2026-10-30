@@ -1,0 +1,45 @@
+# LineGuard on a server that already has a Caddy container as its front door.
+#
+# It publishes no ports: Caddy reaches it by name over a Docker network the Caddy container is on
+# (called "edge" here). Give LineGuard its own network with Caddy if you can, rather than one
+# shared with other applications. See README.md in this folder.
+
+name: lineguard
+
+services:
+  lineguard:
+    build:
+      context: ../..
+    image: lineguard:local
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - lineguard_data:/data
+      # Optional: the DJI Thermal SDK, for real Matrice 4T photos (see README).
+      # - /opt/dji_thermal_sdk:/opt/dji_thermal_sdk:ro
+    # LineGuard parses uploaded files, so the container gets as little as possible.
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    # Kept modest so processing a flight never starves other applications on the server.
+    cpus: "1.0"
+    mem_limit: 1536m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      edge:
+        aliases: [lineguard-app]
+
+volumes:
+  lineguard_data:
+
+networks:
+  edge:
+    external: true

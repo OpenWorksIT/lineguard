@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LineGuard privacy policy</title>
+<style>
+  :root { color-scheme: light dark; --fg: #15203a; --muted: #5b6478; --bg: #ffffff; --line: #e3e6ee; }
+  @media (prefers-color-scheme: dark) { :root { --fg: #e8ebf3; --muted: #a3abbd; --bg: #10172a; --line: #26304a; } }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 1.8rem; line-height: 1.2; margin: 0 0 4px; }
+  h2 { font-size: 1.15rem; margin: 2rem 0 .5rem; }
+  p.meta { color: var(--muted); margin: 0 0 2rem; }
+  li { margin: .25rem 0; }
+  a { color: inherit; }
+  table { border-collapse: collapse; width: 100%; font-size: .95rem; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px 8px 0; border-bottom: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<main>
+<h1>LineGuard privacy policy</h1>
+<p class="meta">LineGuard software and the LineGuard phone app, by OpenWorks IT (Pty) Ltd, South Africa. Last updated 31 October 2026.</p>
+
+<p>LineGuard turns thermal photos of powerlines into a list of hotspots, and the LineGuard app guides field technicians to each one. This policy explains what information the app and the LineGuard server handle, where it is kept and who can see it.</p>
+
+<h2>Who is responsible for your data</h2>
+<p>LineGuard runs on a server chosen by the organisation that uses it. That is usually a laptop belonging to the organisation, or a server it controls. The organisation that runs the LineGuard server is responsible for the information on it. Where OpenWorks IT hosts a LineGuard server for an organisation, OpenWorks IT processes that information only on the organisation's behalf and only to provide the service.</p>
+<p>OpenWorks IT does not run any analytics, advertising or tracking in the app, and does not receive any information from the app unless OpenWorks IT is hosting the server the phone is paired with. The one outside service built into the app is Google's QR code scanner (see below).</p>
+
+<h2>What the app handles</h2>
+<table>
+<tr><th>Information</th><th>What it is used for</th><th>Where it goes</th></tr>
+<tr><td>Your location</td><td>Showing where you are on the map, and the distance and direction to the next hotspot.</td><td>Stays on the phone. It is never sent to the LineGuard server or anyone else.</td></tr>
+<tr><td>Camera</td><td>Scanning the pairing QR code, if you choose to scan rather than type the code.</td><td>The image is read on the phone and not kept or sent anywhere.</td></tr>
+<tr><td>QR scanner diagnostics</td><td>The QR scanner is Google's ML Kit. Google collects information about its use to keep it working: device model, operating system and app version, how long scans take and error codes. It does not receive the camera image or the code that was scanned.</td><td>Sent to Google over an encrypted connection, as described in <a href="https://developers.google.com/ml-kit/android-data-disclosure">Google's ML Kit data disclosure</a>. Not used by OpenWorks IT.</td></tr>
+<tr><td>Phone name</td><td>The name you give the phone when pairing, such as "Bakkie 2", so the dashboard shows which phones are connected and who changed a hotspot.</td><td>Sent to the LineGuard server you pair with.</td></tr>
+<tr><td>Hotspot status and notes</td><td>Marking a hotspot repaired or not a fault, and any note you type.</td><td>Sent to the LineGuard server you pair with, and kept on the phone until sent.</td></tr>
+<tr><td>Flights, hotspots and photos</td><td>Downloaded from the LineGuard server so the app works without signal.</td><td>Kept on the phone until you forget that connection or remove the app.</td></tr>
+<tr><td>Map tiles</td><td>Background maps. Unless the LineGuard server provides its own maps, tiles are downloaded from OpenStreetMap, which sees the phone's internet address and the map area requested, as with any website.</td><td>Kept on the phone for offline use.</td></tr>
+</table>
+
+<h2>What the LineGuard server handles</h2>
+<p>The server stores the drone photos it is given, the hotspots found in them, the names of paired phones and the changes made from them. It stores a scrambled form (a hash) of each phone's access key, not the key itself. If the organisation turns on power-line lookups, the server asks the public OpenStreetMap Overpass service for power lines near each flight, which shares only the flight's map area.</p>
+
+<h2>Connections</h2>
+<p>An online LineGuard server is reached over an encrypted (HTTPS) connection. A LineGuard laptop in a vehicle is reached directly over the laptop's own Wi-Fi network, which is protected by that network's password. Each phone must be paired with a one-time code from the dashboard, and the organisation can unpair a phone at any time.</p>
+
+<h2>Keeping and deleting data</h2>
+<ul>
+<li>In the app, <b>Settings → Connections → Forget</b> removes a pairing and everything saved from that LineGuard on the phone. Removing the app removes all of its data.</li>
+<li>On the server, the organisation running LineGuard can unpair phones and delete flights from the dashboard. To ask for information about you to be removed, contact that organisation, or contact OpenWorks IT if it hosts the server.</li>
+</ul>
+
+<h2>Children</h2>
+<p>LineGuard is a work tool for powerline maintenance teams and is not directed at children.</p>
+
+<h2>Your rights</h2>
+<p>Under South Africa's Protection of Personal Information Act (POPIA) and similar laws, you can ask what personal information is held about you and ask for it to be corrected or deleted. Contact the organisation that runs your LineGuard server, or OpenWorks IT at <a href="mailto:info@openworks.co.za">info@openworks.co.za</a>.</p>
+
+<h2>Open source</h2>
+<p>LineGuard is free software under the GNU Affero General Public License v3. Anyone can read exactly what it does: <a href="{{ source_url }}">source code</a>.</p>
+
+<h2>Changes</h2>
+<p>If this policy changes, the new version will be published at this address with a new date.</p>
+</main>
+</body>
+</html>

@@ -1,0 +1,97 @@
+name: Android app
+
+on:
+  push:
+    branches: [main]
+    paths: ["app/**", ".github/workflows/app-android.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read    # only the small publish job below may write (to the app-latest release)
+
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09  # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444  # v5.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961  # v5.7.0
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Accept Android SDK licences
+        run: |
+          SDKM=$(ls "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | head -1)
+          echo "Using $SDKM"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" --install "platforms;android-36" "build-tools;36.0.0" > /dev/null || echo "::warning::could not preinstall SDK 36"
+      - run: npm ci --ignore-scripts   # no package needs install scripts to build the app
+      - run: npm run build
+      - run: npx cap sync android
+      - name: Signing key for test builds
+        env:
+          KEYSTORE_B64: ${{ secrets.LINEGUARD_TEST_KEYSTORE_B64 }}
+          KEYSTORE_PW: ${{ secrets.LINEGUARD_TEST_KEYSTORE_PASSWORD }}
+        run: |
+          K="$RUNNER_TEMP/test.keystore"
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$K"
+            PW="$KEYSTORE_PW"
+          else
+            # No key saved yet (see app/scripts/make-test-key.sh): sign with a one-off key. The APK works,
+            # but it won't install over an earlier test build without uninstalling that first.
+            echo "::warning title=No test signing key::Run app/scripts/make-test-key.sh once so test builds install over each other."
+            PW=$(openssl rand -hex 16)
+            keytool -genkeypair -keystore "$K" -storetype PKCS12 -alias lineguard-test -keyalg RSA -keysize 3072 \
+              -validity 365 -storepass "$PW" -keypass "$PW" -dname "CN=LineGuard one-off test build" > /dev/null
+          fi
+          echo "::add-mask::$PW"
+          { echo "LINEGUARD_KEYSTORE=$K"; echo "LINEGUARD_KEYSTORE_PASSWORD=$PW"; echo "LINEGUARD_KEY_ALIAS=lineguard-test"; echo "LINEGUARD_KEY_PASSWORD=$PW"; } >> "$GITHUB_ENV"
+      - name: Build test APK
+        working-directory: app/android
+        run: |
+          set -o pipefail
+          if ! ./gradlew --no-daemon assembleRelease 2>&1 | tee gradle.log; then
+            # surface the reason as an annotation, readable without the full log
+            msg=$( (grep -A25 "What went wrong" gradle.log || tail -40 gradle.log) | head -40 | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}')
+            echo "::error title=Gradle build failed::${msg}"
+            exit 1
+          fi
+      - name: Name the APK
+        run: |
+          mkdir -p out
+          VERSION=$(node -p "require('./package.json').version")
+          cp android/app/build/outputs/apk/release/app-release.apk "out/LineGuard-${VERSION}-build${GITHUB_RUN_NUMBER}.apk"
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f  # v6.0.0
+        with:
+          name: LineGuard-android
+          path: app/out/*.apk
+          retention-days: 3
+
+  publish:
+    needs: apk
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write   # replaces the app-latest pre-release; runs no third-party code
+    steps:
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53  # v6.0.0
+        with:
+          name: LineGuard-android
+          path: out
+      - name: Publish as the "app-latest" pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release delete app-latest --yes --cleanup-tag 2>/dev/null || true
+          gh release create app-latest out/*.apk --target "$GITHUB_SHA" --prerelease --title "LineGuard app (latest test build)" \
+            --notes "Android test build ${GITHUB_RUN_NUMBER} from ${GITHUB_SHA::7}. Install the APK on the phone (allow installs from this source when asked). Newer test builds install over older ones."

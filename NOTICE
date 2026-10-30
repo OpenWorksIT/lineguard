@@ -1,0 +1,75 @@
+LineGuard (Project Argus)
+Copyright (C) 2026 OpenWorks IT (Pty) Ltd, South Africa <https://openworks.co.za>
+
+This program is free software: you can redistribute it and/or modify it under the terms of
+the GNU Affero General Public License as published by the Free Software Foundation, either
+version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+See the GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License along with this
+program (the LICENSE file). If not, see <https://www.gnu.org/licenses/>.
+
+Source code: https://github.com/OpenWorksIT/lineguard
+
+-------------------------------------------------------------------------------------------
+Additional permission under GNU AGPL version 3 section 7 (app stores)
+
+You may distribute the LineGuard phone app, or a work based on it, through an app store
+(such as the Apple App Store or Google Play) even if that store's terms of service impose
+restrictions that are incompatible with the GNU AGPL, provided that the Corresponding Source
+of the version you distribute is also available under the GNU AGPL, with or without this
+permission, through a channel that does not impose those restrictions. You may remove this
+additional permission from your copy or modified version.
+
+-------------------------------------------------------------------------------------------
+Additional permission under GNU AGPL version 3 section 7 (Google libraries in the phone app)
+
+If you modify the LineGuard phone app, or any covered work, by linking or combining it with
+Google Play services or Google ML Kit libraries (or a modified version of those libraries),
+containing parts covered by the terms of the Google APIs Terms of Service or other Google
+licence terms, the licensors of this Program grant you additional permission to convey the
+resulting work. Corresponding Source for a non-source form of such a combination shall not
+include the source code for the parts of those libraries used as well as that of the covered
+work. You may remove this additional permission from your copy or modified version.
+
+Contributions to LineGuard are accepted only under the AGPL with both additional permissions
+above, so that store builds can keep including contributed code.
+
+-------------------------------------------------------------------------------------------
+Network use (GNU AGPL section 13)
+
+If you modify LineGuard and let people use it over a network (for example a hosted server
+that phones or browsers connect to), you must offer them the source code of your modified
+version. Set `source_url` in config.toml (or LINEGUARD_SOURCE_URL) to where your version's
+source can be downloaded; the dashboard and the phone app show that link.
+
+-------------------------------------------------------------------------------------------
+Names and logos
+
+The licence covers the code, not the LineGuard and Project Argus names or the LineGuard
+logo, which identify OpenWorks IT's releases. If you publish a modified version, especially
+in an app store, give it a different name and icon so people can tell it apart.
+
+-------------------------------------------------------------------------------------------
+Not included
+
+The DJI Thermal SDK (dji_irp), used to read DJI radiometric photos, is DJI's proprietary
+software. It is not part of LineGuard and is not distributed with it; each user downloads it
+from DJI under DJI's own terms. LineGuard runs it as a separate program.
+
+Third-party components bundled or used:
+  Free software (licences compatible with the AGPL):
+    Leaflet (BSD-2-Clause): lineguard/static/vendor/leaflet/LICENSE, and bundled in the app
+    Capacitor and the Capacitor plugins used (MIT), @capacitor-mlkit/barcode-scanning (Apache-2.0),
+    idb-keyval (Apache-2.0), tslib (0BSD): phone app, via npm
+    AndroidX, CameraX, Kotlin, Gson (Apache-2.0); Ionic geolocation libraries (MIT): phone app builds
+    Flask, Werkzeug, Jinja2, NumPy, SciPy, segno (BSD), Pillow (MIT-CMU), waitress (ZPL-2.1): server
+  Not free software (phone app only, under the permission above):
+    Google Play services (code scanner, location) on Android; Google ML Kit barcode scanning on
+    Android and iOS. ML Kit sends Google diagnostic data about its own use (device model, OS version,
+    app version, performance and error codes); see the privacy policy.
+  The app's Settings > Open-source licences lists every bundled package with its licence text.
+Map data © OpenStreetMap contributors, available under the Open Database Licence (ODbL).

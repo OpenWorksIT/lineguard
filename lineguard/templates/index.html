@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LineGuard</title>
+<link rel="icon" href="/static/logo-mark.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/" aria-label="LineGuard home">
+    <img src="/static/logo-mark.svg" alt="" width="44" height="40">
+    <span class="brand-name">LineGuard</span>
+  </a>
+  <span class="server-name" id="server-name"></span>
+  <div class="top-actions">
+    <button type="button" class="quiet" id="phones-open">Connect a phone</button>
+    <button type="button" class="quiet" id="towers-open">Tower list</button>
+    <button type="button" id="add-open">Add a flight</button>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="flights" aria-label="Flights">
+    <h2>Flights</h2>
+    <ul id="flight-list"></ul>
+    <p class="empty" id="flights-empty" hidden>No flights yet. Choose <b>Add a flight</b> to process one.</p>
+  </aside>
+
+  <section class="work" aria-label="Hotspots">
+    <div class="flight-head" id="flight-head" hidden>
+      <div class="flight-title">
+        <h1 id="flight-name"></h1>
+        <p id="flight-meta" class="meta"></p>
+      </div>
+      <nav class="exports" aria-label="Downloads">
+        <a id="report-link" target="_blank">Print report</a>
+        <details class="more">
+          <summary>More</summary>
+          <div class="menu">
+            <a id="kml-link">Download KML</a>
+            <a id="gpx-link">Download GPX</a>
+            <a id="csv-link">Download CSV</a>
+            <button type="button" id="power-load">Load power lines from OpenStreetMap</button>
+            <button type="button" id="reprocess">Process this flight again</button>
+          </div>
+        </details>
+      </nav>
+    </div>
+
+    <div class="summary" id="summary" hidden>
+      <button type="button" class="tile major" data-sev="major"><b id="n-major">0</b><span>Major, over 15 °C</span></button>
+      <button type="button" class="tile probable" data-sev="probable"><b id="n-probable">0</b><span>Probable, 4 to 15 °C</span></button>
+      <button type="button" class="tile possible" data-sev="possible"><b id="n-possible">0</b><span>Possible, under 4 °C</span></button>
+      <button type="button" class="tile done" data-filter-status="repaired"><b id="n-repaired">0</b><span>Repaired</span></button>
+    </div>
+
+    <div class="map-wrap" id="map-wrap" hidden>
+      <div id="map" role="region" aria-label="Map of hotspots"></div>
+      <p id="tile-note" class="tile-note" hidden>No map background without internet. Positions are still exact.</p>
+    </div>
+
+    <div class="table-bar" id="table-bar" hidden>
+      <div class="filters" role="group" aria-label="Show">
+        <button type="button" data-filter="open" class="on">Open</button>
+        <button type="button" data-filter="all">All</button>
+        <button type="button" data-filter="repaired">Repaired</button>
+        <button type="button" data-filter="dismissed">Not a fault</button>
+      </div>
+      <span class="meta" id="sev-filter-note"></span>
+    </div>
+    <table class="hotspots" id="hotspot-table" hidden>
+      <thead><tr><th>Hotspot</th><th class="heat-col">Rise over the other phases</th><th>Where</th><th>Status</th></tr></thead>
+      <tbody id="hotspot-rows"></tbody>
+    </table>
+    <p class="empty" id="hotspots-empty" hidden></p>
+    <p class="empty" id="choose-flight">Choose a flight to see its hotspots.</p>
+  </section>
+
+  <aside class="detail" id="detail" hidden aria-label="Hotspot detail">
+    <div class="d-head">
+      <h2 id="d-title"></h2>
+      <button type="button" class="close" id="detail-close" aria-label="Close">×</button>
+    </div>
+    <p class="d-rise"><span id="d-dt"></span> <span id="d-sev" class="sev"></span></p>
+    <p id="d-where" class="where"></p>
+    <p id="d-history" class="history" hidden></p>
+    <div class="status-buttons" role="group" aria-label="Status">
+      <button type="button" data-status="open">Open</button>
+      <button type="button" data-status="repaired">Repaired</button>
+      <button type="button" data-status="dismissed">Not a fault</button>
+    </div>
+    <p class="meta" id="d-updated"></p>
+    <div class="d-photos">
+      <figure><img id="d-thermal" alt="Thermal close-up"><figcaption>Thermal</figcaption></figure>
+      <figure id="d-colour-fig" hidden><img id="d-colour" alt="Colour close-up"><figcaption>Colour, approximate framing</figcaption></figure>
+    </div>
+    <div class="coords">
+      <img id="d-qr" class="qr" alt="QR code: open this location in Google Maps">
+      <div>
+        <code id="d-coords"></code>
+        <div class="coord-actions">
+          <button type="button" id="d-copy" class="quiet small">Copy</button>
+          <a id="d-maps" target="_blank" rel="noopener">Google Maps</a>
+          <a id="d-oim" target="_blank" rel="noopener">Open Infrastructure Map</a>
+        </div>
+      </div>
+    </div>
+    <label for="d-note">Note</label>
+    <textarea id="d-note" rows="3" placeholder="What was found on site"></textarea>
+    <details class="whole">
+      <summary>Whole thermal photo</summary>
+      <figure><img id="d-context" alt="Whole thermal photo"><figcaption id="d-photo"></figcaption></figure>
+      <p class="meta" id="d-seen"></p>
+    </details>
+  </aside>
+</main>
+
+<dialog id="add-dialog" class="dialog">
+  <form method="dialog" class="dialog-close"><button aria-label="Close">×</button></form>
+  <h2>Add a flight</h2>
+  <div id="add-local" hidden>
+    <p>Copy a flight folder from the drone's memory card into <code id="inbox-path">the inbox</code>, and it's processed automatically. Or give the folder's path here:</p>
+    <form class="row-form" id="import-form">
+      <input id="import-path" name="path" placeholder="/media/sdcard/DCIM/DJI_001" autocomplete="off" required aria-label="Flight folder path">
+      <button type="submit">Process folder</button>
+    </form>
+  </div>
+  <div id="add-upload" hidden>
+    <p>Upload a .zip of the flight folder from the memory card, or select its thermal photos. Processing starts when the upload finishes.</p>
+    <form class="row-form" id="upload-form">
+      <input id="upload-files" name="files" type="file" multiple accept=".zip,.jpg,.jpeg,.JPG,.npy,.json" required aria-label="Flight files">
+      <button type="submit" id="upload-button">Upload and process</button>
+    </form>
+    <p class="meta" id="upload-progress" hidden></p>
+  </div>
+</dialog>
+
+<dialog id="phones-dialog" class="dialog">
+  <form method="dialog" class="dialog-close"><button aria-label="Close">×</button></form>
+  <h2>Connect a phone</h2>
+  <div id="pair-off" hidden>
+    <p>Phones can't reach this laptop yet. Turn on sharing, then restart LineGuard:</p>
+    <pre>lineguard install-service --share</pre>
+    <p class="meta">Or add <code>share = true</code> to config.toml. With no Wi-Fi in the vehicle, <code>lineguard hotspot</code> turns the laptop into one.</p>
+  </div>
+  <div id="pair-on" hidden>
+    <div class="pair-grid">
+      <div id="pair-qr" class="pair-qr" aria-label="Pairing QR code"></div>
+      <div>
+        <ol class="steps">
+          <li>Put the phone on the same Wi-Fi as this laptop<span id="pair-hosted-note"></span>.</li>
+          <li>In the LineGuard app, choose <b>Pair with a LineGuard</b> and scan this code.</li>
+          <li>Or type the address and code:</li>
+        </ol>
+        <p class="pair-code" id="pair-code"></p>
+        <p class="meta" id="pair-urls"></p>
+        <p class="meta" id="pair-expiry"></p>
+      </div>
+    </div>
+  </div>
+  <h3>Paired phones</h3>
+  <ul id="device-list" class="device-list"></ul>
+</dialog>
+
+<dialog id="towers-dialog" class="dialog">
+  <form method="dialog" class="dialog-close"><button aria-label="Close">×</button></form>
+  <h2>Tower list</h2>
+  <p>Hotspots are labelled with the nearest tower. LineGuard uses OpenStreetMap (the data behind openinframap.org), but wind-farm collector lines are rarely mapped there, so you can add your own tower register.</p>
+  <p class="meta">CSV with columns <code>ref, lat, lon</code> and optionally <code>line</code>, or a KML or GeoJSON of points. Importing a file with the same name replaces it.</p>
+  <form class="row-form" id="towers-form">
+    <input id="towers-file" type="file" accept=".csv,.kml,.geojson,.json" required aria-label="Tower file">
+    <button type="submit">Import towers</button>
+  </form>
+  <p class="meta" id="towers-msg" role="status"></p>
+  <ul id="tower-sources" class="device-list"></ul>
+</dialog>
+
+<footer class="foot">LineGuard {{ version }} by OpenWorks IT. Free software under the <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener">GNU AGPL v3</a>: <a href="{{ source_url }}" rel="noopener">source code</a>. Map and power data © OpenStreetMap contributors.</footer>
+<script src="/static/vendor/leaflet/leaflet.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
