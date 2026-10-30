@@ -84,7 +84,7 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           cp android/app/build/outputs/bundle/release/app-release.aab "out/LineGuard-${VERSION}-${LINEGUARD_VERSION_CODE}.aab"
           echo "Version ${VERSION}, version code ${LINEGUARD_VERSION_CODE}" >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f  # v6.0.0
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: LineGuard-play-bundle
           path: app/out/*.aab
