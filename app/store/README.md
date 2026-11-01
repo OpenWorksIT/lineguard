@@ -3,7 +3,7 @@
 This folder holds everything needed to put the app in **Google Play** and the **Apple App Store**: listing text, screenshots, graphics, privacy answers, reviewer notes, and the order of steps.
 
 App ID on both stores: `za.co.openworks.lineguard`.
-Privacy policy: <https://lineguard.openworks.co.za/privacy>. It is served by the LineGuard server, from `lineguard/templates/privacy.html`.
+Privacy policy: <https://www.openworks.co.za/lineguard/privacy/>, on the OpenWorks website (repo `GoufR42/openworks`, `content/lineguard/privacy.md`). App info page: <https://www.openworks.co.za/lineguard/>. Each LineGuard server also serves the same policy at `/privacy`, for self-hosters, from `lineguard/templates/privacy.html`. Keep the two in step.
 
 ## 1. Accounts (one-off)
 

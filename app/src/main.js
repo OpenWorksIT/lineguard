@@ -15,7 +15,7 @@ const $app = document.getElementById('app');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const SEV = { major: 'Major', probable: 'Probable', possible: 'Possible' };
 const STATUS = { open: 'Open', repaired: 'Repaired', dismissed: 'Not a fault' };
-const PRIVACY_URL = 'https://lineguard.openworks.co.za/privacy';
+const PRIVACY_URL = 'https://www.openworks.co.za/lineguard/privacy/';
 const SOURCE_URL = 'https://github.com/OpenWorksIT/lineguard';
 
 const S = {
