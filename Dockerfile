@@ -1,5 +1,5 @@
 # LineGuard as a container, for hosting the dashboard on a server.
-FROM python:3.13-slim
+FROM python:3.15-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     LINEGUARD_HOST=0.0.0.0 LINEGUARD_PORT=8750 \
