@@ -3,7 +3,9 @@ const { chromium } = require('playwright');
 // node scripts/storeshots.cjs store/screenshots   (needs Playwright with Chromium)
 const OUT = process.argv[2] || "store/screenshots";
 const sets = [
-  { name: 'iphone-6.9', viewport: { width: 440, height: 956 }, dsf: 3 },
+  { name: 'iphone-6.9', viewport: { width: 440, height: 956 }, dsf: 3 },   // App Store 6.9": 1320 x 2868
+  { name: 'iphone-6.5', viewport: { width: 428, height: 926 }, dsf: 3 },   // App Store 6.5": 1284 x 2778
+  { name: 'iphone-5.5', viewport: { width: 414, height: 736 }, dsf: 3 },   // App Store 5.5": 1242 x 2208
   { name: 'android-phone', viewport: { width: 360, height: 640 }, dsf: 3 },
 ];
 (async () => {

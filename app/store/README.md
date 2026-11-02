@@ -117,7 +117,9 @@ LineGuard is made in South Africa by OpenWorks IT. To use it with your own drone
 | `graphics/play-feature-graphic-1024x500.png` | Play feature graphic |
 | `graphics/appstore-icon-1024.png` | Apple icon; it's already in the build, kept here for reference |
 | `screenshots/android-phone-*.png` | Play phone screenshots (1080 × 1920), in order |
-| `screenshots/iphone-6.9-*.png` | Apple 6.9" iPhone screenshots (1320 × 2868), in order |
+| `screenshots/iphone-6.9-*.png` | Apple 6.9" iPhone screenshots (1320 × 2868), in order. This is the one size App Store Connect requires. |
+| `screenshots/iphone-6.5-*.png` | Apple 6.5" iPhone screenshots (1284 × 2778), if App Store Connect asks for that size |
+| `screenshots/iphone-5.5-*.png` | Apple 5.5" iPhone screenshots (1242 × 2208), if App Store Connect asks for that size |
 
 The screenshots are taken from the built-in demo. Their map background is blank because the machine that made them had no access to OpenStreetMap. Before submitting, consider swapping `*-1-map.png` for a screenshot from a real phone, where the map tiles show.
 
