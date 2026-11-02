@@ -115,6 +115,7 @@ LineGuard is made in South Africa by OpenWorks IT. To use it with your own drone
 | --- | --- |
 | `graphics/play-icon-512.png` | Play app icon (512 × 512) |
 | `graphics/play-feature-graphic-1024x500.png` | Play feature graphic |
+| `graphics/appstore-header-5244x2950.png`, `graphics/appstore-header-3840x1646.png` | Apple product-page header (App Store Connect → Header and Search Results). Made from `graphics/src/appstore-header.html` with the iPhone screenshots beside it. |
 | `graphics/appstore-icon-1024.png` | Apple icon; it's already in the build, kept here for reference |
 | `screenshots/android-phone-*.png` | Play phone screenshots (1080 × 1920), in order |
 | `screenshots/iphone-6.9-*.png` | Apple 6.9" iPhone screenshots (1320 × 2868), in order. This is the one size App Store Connect requires. |
