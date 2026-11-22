@@ -15,14 +15,14 @@
   "dependencies": {
     "@capacitor-community/keep-awake": "^8.0.1",
     "@capacitor-community/text-to-speech": "^8.0.2",
-    "@capacitor-mlkit/barcode-scanning": "^8.2.1",
-    "@capacitor/android": "^8.6.0",
+    "@capacitor-mlkit/barcode-scanning": "^8.2.2",
+    "@capacitor/android": "^8.6.2",
     "@capacitor/app": "^8.1.2",
     "@capacitor/app-launcher": "^8.0.1",
-    "@capacitor/core": "^8.6.0",
-    "@capacitor/geolocation": "^8.2.4",
+    "@capacitor/core": "^8.6.2",
+    "@capacitor/geolocation": "^8.2.5",
     "@capacitor/haptics": "^8.0.2",
-    "@capacitor/ios": "^8.6.0",
+    "@capacitor/ios": "^8.6.2",
     "@capacitor/network": "^8.0.1",
     "@capacitor/preferences": "^8.0.1",
     "@capacitor/status-bar": "^8.0.4",
@@ -31,7 +31,7 @@
   },
   "devDependencies": {
     "@capacitor/assets": "^4.0.0",
-    "@capacitor/cli": "^8.6.0",
-    "vite": "^8.3.5"
+    "@capacitor/cli": "^8.6.2",
+    "vite": "^8.3.8"
   }
 }

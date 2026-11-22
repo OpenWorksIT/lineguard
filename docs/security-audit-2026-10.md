@@ -97,3 +97,19 @@ Regression tests are in `test_pentest_round_two`.
 - **Token storage.** On iOS, tokens live in web-view storage and are included in device backups. Moving them to the Keychain and Android Keystore is planned.
 - **Proprietary scanner and location.** The QR scanner (ML Kit) and Android location (Play services) are proprietary. Replacing them with free alternatives would remove the telemetry and allow F-Droid distribution.
 - **Build pinning.** `Podfile.lock` (needs a Mac), the Gradle wrapper checksum, and a digest-pinned Docker base image are still to come.
+
+---
+
+# Routine check, 22 November 2026
+
+| Check | Result |
+| --- | --- |
+| `pip-audit` on the server's dependencies | No known vulnerabilities |
+| `bandit` (high severity) on `lineguard/` | Nothing found |
+| `npm audit` for the app's shipped packages | No known vulnerabilities |
+| `npm audit` for the app's build tools | 6 moderate issues in packages used only by `@capacitor/assets` (glob, minimatch, rimraf, uuid, xcode, @trapezedev/project). Fixed with `npm audit fix`; now 0 |
+| Patch updates | Capacitor 8.6.0 → 8.6.2, geolocation 8.2.4 → 8.2.5, ML Kit scanner 8.2.1 → 8.2.2, Vite 8.3.5 → 8.3.8 (the same as Dependabot PRs #11 and #12) |
+| Server tests | 12 passed |
+| App demo smoke test (built app in a browser) | Passed, no errors |
+
+The other open Dependabot PRs are major-version upgrades: actions/checkout 7, upload-artifact 7, download-artifact 8, setup-java 6, setup-python 7, Gradle 9, google-services 4.5, and the Python 3.15 Docker base image. They need a test build each, so they were left for a planned update rather than merged in a routine check.
