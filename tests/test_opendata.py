@@ -123,7 +123,10 @@ def test_files_load_in_other_tools(settings, tmp_path):
         con.execute(f"SELECT count(*) FROM read_csv('{out}/hotspot_events.csv')").fetchone()
 
     frictionless = pytest.importorskip("frictionless")
-    report = frictionless.validate(str(out / "datapackage.json"))
+    # validate the CSV package (frictionless reads Parquet through pandas, which LineGuard doesn't need;
+    # DuckDB has already checked the Parquet files above)
+    opendata.write_folder(store, settings, tmp_path / "csv", formats=("csv",))
+    report = frictionless.validate(str(tmp_path / "csv" / "datapackage.json"))
     assert report.valid, report.flatten(["rowNumber", "fieldName", "type", "note"])
 
     # the guide and the Power Query files in the repo are generated from the same definitions
