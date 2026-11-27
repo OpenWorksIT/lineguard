@@ -256,6 +256,8 @@ def test_security_guards(tmp_path):
     # security headers, and CORS only for the app's own origins
     r = c.get("/", headers={"Origin": "http://localhost"})
     assert "frame-ancestors 'none'" in r.headers["Content-Security-Policy"] and r.headers["X-Frame-Options"] == "DENY"
+    # OpenStreetMap tiles need a Referer; only the origin is ever sent
+    assert r.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
     phone = {"REMOTE_ADDR": "10.42.0.50"}
     assert "Access-Control-Allow-Origin" not in c.get("/healthz", headers={"Origin": "http://localhost:3000"}).headers
     assert c.get("/healthz", headers={"Origin": "capacitor://localhost"}).headers["Access-Control-Allow-Origin"] == "capacitor://localhost"

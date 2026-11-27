@@ -199,7 +199,9 @@ def create_app(settings, store: Store, worker=None) -> Flask:
         resp.headers.setdefault("Content-Security-Policy", CSP)
         resp.headers["X-Content-Type-Options"] = "nosniff"
         resp.headers["X-Frame-Options"] = "DENY"
-        resp.headers["Referrer-Policy"] = "no-referrer"
+        # OpenStreetMap's tile servers require a Referer from websites; send only the origin,
+        # never the page address, and nothing over a downgrade to http
+        resp.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         origin = request.headers.get("Origin", "")
         if origin in APP_ORIGINS or origin in dev_origins:
             resp.headers["Access-Control-Allow-Origin"] = origin

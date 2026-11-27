@@ -10,5 +10,6 @@
     "CapacitorHttp": {
       "enabled": false
     }
-  }
+  },
+  "appendUserAgent": "LineGuard (za.co.openworks.lineguard; +https://www.openworks.co.za/lineguard/)"
 }
