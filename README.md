@@ -10,8 +10,31 @@ Part of **Project Argus** by [OpenWorks IT](https://www.openworks.co.za).
 2. Copy the flight folder from the memory card into the inbox (`~/LineGuard/inbox`), or paste its path into the dashboard.
 3. LineGuard finds the conductors in each photo and compares every phase with the other two at the same point. It keeps only the hotspots that appear in most of the overlapping photos that covered them, then places each one on the map.
 4. Technicians get a map, a printable report with a QR code per fault, and KML, GPX and CSV files for navigation apps.
+5. Asset teams get every flight, fault, repair and recheck as documented tables for Power BI, Databricks or Excel.
 
-Each hotspot is graded on NETA's similar-component bands: possible (1 to 3 °C), probable (4 to 15 °C) and major (over 15 °C). Hotspots that match one from an earlier flight are linked, so the dashboard shows whether a joint is getting worse.
+Each hotspot is graded on NETA's similar-component bands: possible (1 to 3 °C), probable (4 to 15 °C) and major (over 15 °C).
+
+## Fault history and recurrence tracking
+
+LineGuard keeps the full history of every fault, and checks each spot again on later flights:
+
+- **Every change is kept, with its time.** LineGuard records when it found each hotspot, plus every status change and note from the dashboard or a phone, with who made it. A phone that was out of signal sends the time the technician made the change, not the time it reached the server.
+- **One spot, one ID.** A hotspot found again on a later flight is linked to the earlier one, so a spot's whole timeline sits together: found, repaired, checked, and found again if it came back.
+- **Every repair gets checked by the next flight.** When a later flight's photos cover a spot that had been marked repaired, LineGuard records whether the repair held or the fault came back. Faults that come back are flagged **Came back** on the dashboard, the printed report and the phone app.
+- **Reprocessing keeps the history.** Processing a flight again, for example with new settings, keeps each hotspot's identity, status and notes. Hotspots it no longer finds are marked as gone, never silently deleted.
+
+## Data for Power BI and Databricks
+
+Everything LineGuard knows comes out as five documented tables: sites, flights, hotspots, hotspot events (the history) and revisits (each later flight over each spot, with its outcome). They come as Parquet and CSV, described in the open [Frictionless Data Package](https://datapackage.org) format. The format guide is [docs/data-format.md](docs/data-format.md). Every row carries a site ID and permanent IDs, so several laptops and servers can feed one lakehouse.
+
+- **Live feed:** `https://<server>/api/data/v1/<table>.parquet` (or `.csv`). Each reporting tool gets its own read-only data key from the dashboard (**Data feed**). A key can read these tables and nothing else.
+- **Folder drop for site laptops:** `lineguard export-data ~/OneDrive/LineGuard/site-a` writes the tables into a folder that syncs when there is signal. Run it from a timer to keep the folder fresh.
+- **Download:** the dashboard's **Data feed → Download all data** gives everything as one zip.
+
+Ready-made connectors are in [integrations/](integrations/):
+
+- **Power BI:** typed queries, relationships and measures such as repair hold rate and median days to repair.
+- **Databricks:** a notebook that loads one or more sites into Unity Catalog, with views for open faults, repair outcomes and KPIs.
 
 ## Install (Linux)
 
@@ -109,6 +132,7 @@ Everything is optional. These are the defaults:
 | `public_url` | | Hosted only (required): the https address phones and browsers use (`LINEGUARD_PUBLIC_URL`). |
 | `behind_proxy` | `false` | Hosted behind Caddy: take each client's address from `X-Forwarded-For` so login limits apply per client. Only when the proxy is the sole way in. |
 | `password` | | Requires a login (12 characters or more). Always set when hosted. |
+| `camera_timezone` | this computer's | Time zone the drone's clock is set to, e.g. `Africa/Johannesburg`. Gives every flight a UTC time, so flights can be compared with repairs (`LINEGUARD_CAMERA_TIMEZONE`). |
 | `[detection] standoff_m` | `20.0` | Camera-to-conductor distance. The laser range is used instead when it plausibly hit the line. |
 | `[detection] threshold_c` | `3.0` | Minimum rise over the other phases to flag. |
 | `[detection] phases` | `3` | Conductors expected side by side in each photo. |
@@ -132,7 +156,7 @@ pip install -e ".[test]"
 pytest
 ```
 
-Layout: `readers/` (DJI and generic photos), `detect.py` (the method), `pipeline.py` (one flight end to end), `worker.py` (inbox watcher), `web.py` with `templates/` and `static/` (dashboard), `demo_scene.py` (the flight simulator used by the demo and the tests).
+Layout: `readers/` (DJI and generic photos), `detect.py` (the method), `pipeline.py` (one flight end to end), `worker.py` (inbox watcher), `web.py` with `templates/` and `static/` (dashboard), `opendata.py` (the data format and its exports; `integrations/generate.py` regenerates the docs and Power Query files from it), `demo_scene.py` (the flight simulator used by the demo and the tests).
 
 The dashboard uses [Leaflet](https://leafletjs.com) (BSD-2-Clause), bundled in `lineguard/static/vendor/leaflet`.
 

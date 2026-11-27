@@ -7,6 +7,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import math
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import numpy as np
@@ -23,7 +24,9 @@ def scenarios():
     return {s.name: s.label for s in scene.SCENARIOS}
 
 
-def make_flight(out: Path, scenario="33kv_mild", seed=1, spans=5, glints=12) -> dict:
+def make_flight(out: Path, scenario="33kv_mild", seed=1, spans=5, glints=12, flown: datetime | None = None) -> dict:
+    """flown: when the simulated flight started, in camera (local) time; default now."""
+    start = flown or datetime.now().replace(microsecond=0)
     sc = next(s for s in scene.SCENARIOS if s.name == scenario)
     sc = dataclasses.replace(sc, n_spans=spans)
     w = scene.build_world(sc, seed)
@@ -52,7 +55,7 @@ def make_flight(out: Path, scenario="33kv_mild", seed=1, spans=5, glints=12) -> 
         lat, lon = to_latlon(meta["x"], meta["y"])
         yaw = (90 - math.degrees(line_angle + meta["heading"])) % 360
         write(out, f"DEMO_{i:04d}", img, lat=lat, lon=lon, yaw_deg=yaw, pitch_deg=-90.0,
-              rel_alt_m=float(meta["z"]), taken=f"simulated {sc.label}")
+              rel_alt_m=float(meta["z"]), taken=(start + timedelta(seconds=2 * i)).strftime("%Y:%m:%d %H:%M:%S"))
     truth = dict(
         scenario=sc.name, label=sc.label, standoff_m=sc.standoff,
         faults=[dict(zip(("lat", "lon"), to_latlon(f["x"], f["y"])), dt=f["dt"], kind=f["kind"]) for f in w.faults],

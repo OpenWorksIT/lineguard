@@ -322,6 +322,7 @@ async function renderHotspot() {
     <div class="rise"><span class="big-num">+${h.dt.toFixed(1)} °C</span><span class="pill ${h.severity}">${SEV[h.severity]}</span></div>
     <p class="muted">Hotter than the same point on the other phases. Seen in ${h.photos} of ${h.seen} photos.</p>
     ${towerLabel(h) ? `<p class="tower">${esc(towerLabel(h))}${h.tower_dist_m != null ? `, ${Math.round(h.tower_dist_m)} m` : ''}</p>` : ''}
+    ${h.recurring ? '<p class="banner">Came back: this spot was marked repaired before this flight.</p>' : ''}
     ${h.prev_dt != null ? `<p class="banner">Seen on an earlier flight at +${h.prev_dt.toFixed(1)} °C.</p>` : ''}
     <div class="photos"><figure><img id="i-t" alt="Thermal close-up"><figcaption>Thermal</figcaption></figure>
       ${h.colour_crop ? '<figure><img id="i-c" alt="Colour close-up"><figcaption>Colour</figcaption></figure>' : ''}</div>

@@ -51,7 +51,7 @@
   <tbody>
   {% for h in hotspots %}
   <tr>
-    <td class="id">LG-{{ h.id }}{% if h.status == 'repaired' %}<br><small>Repaired</small>{% endif %}</td>
+    <td class="id">LG-{{ h.id }}{% if h.status == 'repaired' %}<br><small>Repaired</small>{% endif %}{% if h.recurring %}<br><small><b>Came back after repair</b></small>{% endif %}</td>
     <td><span class="dt">+{{ '%.1f' % h.dt }} °C</span><br><span class="sev {{ h.severity }}">{{ h.severity|capitalize }}</span>
       {% if h.prev_dt is not none %}<br><small>Earlier flight: +{{ '%.1f' % h.prev_dt }} °C</small>{% endif %}</td>
     <td><img class="crop" src="/crops/{{ h.thermal_crop }}" alt="">{% if h.colour_crop %}<img class="crop" src="/crops/{{ h.colour_crop }}" alt="" style="margin-top:2mm">{% endif %}</td>

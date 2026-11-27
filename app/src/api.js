@@ -36,6 +36,7 @@ export function cleanHotspot(h) {
     tower_ref: str(h.tower_ref, 40), tower_kind: h.tower_kind === 'pole' ? 'pole' : 'tower', tower_dist_m: opt(h.tower_dist_m),
     line_name: str(h.line_name, 80), line_voltage_kv: opt(h.line_voltage_kv),
     updated: str(h.updated, 40), updated_by: str(h.updated_by, 60), pending: !!h.pending,
+    recurring: h.recurring === true, repairs_before: num(h.repairs_before),
   };
 }
 

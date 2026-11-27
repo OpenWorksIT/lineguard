@@ -2,4 +2,4 @@
 # Copyright (C) 2026 OpenWorks IT (Pty) Ltd
 """LineGuard: thermal hotspot detection for powerlines (Project Argus, OpenWorks IT)."""
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"

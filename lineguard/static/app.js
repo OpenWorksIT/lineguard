@@ -177,7 +177,7 @@
       tr.setAttribute("aria-selected", String(h.id === state.selected));
       const w = Math.max(4, Math.min(100, (h.dt / top) * 100));
       tr.innerHTML = `
-        <td class="id">LG-${h.id}</td>
+        <td class="id">LG-${h.id}${h.recurring ? '<span class="back" title="This spot was marked repaired before this flight">Came back</span>' : ""}</td>
         <td><div class="heat"><b>+${h.dt.toFixed(1)} °C</b><span class="bar" title="${SEV_NAME[h.severity]}"><span class="${h.severity}" style="width:${w}%"></span></span></div></td>
         <td class="where-cell">${esc(whereText(h)) || "—"}<span class="coord">${h.lat.toFixed(6)}, ${h.lon.toFixed(6)}</span></td>
         <td><span class="status-pill ${h.status}">${STATUS_NAME[h.status]}</span></td>`;
@@ -200,11 +200,14 @@
     sev.className = `sev ${h.severity}`;
     $("d-where").textContent = whereText(h) ? `${whereText(h)}${h.tower_dist_m != null ? `, ${Math.round(h.tower_dist_m)} m away` : ""}` : "";
     const hist = $("d-history");
-    hist.hidden = h.prev_dt == null;
+    hist.hidden = h.prev_dt == null && !h.recurring;
+    const parts = [];
+    if (h.recurring) parts.push(`Came back: this spot was marked repaired${h.repairs_before > 1 ? ` ${h.repairs_before} times` : ""} before this flight.`);
     if (h.prev_dt != null) {
       const diff = h.dt - h.prev_dt;
-      hist.textContent = `Also found on an earlier flight at +${h.prev_dt.toFixed(1)} °C: now ${Math.abs(diff).toFixed(1)} °C ${diff >= 0 ? "hotter" : "cooler"}.`;
+      parts.push(`${h.sighting_number > 2 ? `Found on ${h.sighting_number - 1} earlier flights; the last` : "Also found on an earlier flight"} at +${h.prev_dt.toFixed(1)} °C: ${Math.abs(diff) < 0.05 ? "the same now" : `now ${Math.abs(diff).toFixed(1)} °C ${diff > 0 ? "hotter" : "cooler"}`}.`);
     }
+    hist.textContent = parts.join(" ");
     document.querySelectorAll(".status-buttons button").forEach((b) => b.classList.toggle("on", b.dataset.status === h.status));
     $("d-updated").textContent = h.updated_by && h.status !== "open" ? `Marked ${STATUS_NAME[h.status].toLowerCase()} by ${h.updated_by}, ${fmtDate(h.updated)}` : "";
     $("d-thermal").src = `/crops/${h.thermal_crop}`;
@@ -301,6 +304,29 @@
 
   // ---- events
   $("add-open").addEventListener("click", () => $("add-dialog").showModal());
+  // ---- data feed
+  async function loadDataKeys() {
+    const r = await api("/api/data-keys").catch(() => ({ keys: [], feed: "", tables: [] }));
+    $("data-feed").textContent = r.feed;
+    $("data-tables").innerHTML = r.tables.map((t) => `<code>${esc(t)}</code>`).join(", ");
+    $("data-keys").innerHTML = r.keys.length ? r.keys.map((k) => `<li><span><b>${esc(k.name)}</b> · made ${fmtDate(k.created)}${k.last_used ? `, last used ${fmtDate(k.last_used)}` : ", not used yet"}</span>
+      <button type="button" class="quiet small" data-unkey="${k.id}">Remove</button></li>`).join("") : '<li class="meta">No data keys yet.</li>';
+    $("data-keys").querySelectorAll("[data-unkey]").forEach((b) => b.addEventListener("click", async () => {
+      await api(`/api/data-keys/${b.dataset.unkey}`, { method: "DELETE" });
+      loadDataKeys();
+    }));
+  }
+  $("data-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const r = await api("/api/data-keys", { method: "POST", body: JSON.stringify({ name: $("data-name").value }) });
+    $("data-key").textContent = r.key;
+    $("data-new").hidden = false;
+    $("data-name").value = "";
+    loadDataKeys();
+  });
+  $("data-open").addEventListener("click", () => { $("data-new").hidden = true; $("data-key").textContent = ""; loadDataKeys(); $("data-dialog").showModal(); });
+  $("data-dialog").addEventListener("close", () => { $("data-new").hidden = true; $("data-key").textContent = ""; });
+
   $("phones-open").addEventListener("click", openPhones);
   $("towers-open").addEventListener("click", () => { $("towers-msg").textContent = ""; loadTowerSources(); $("towers-dialog").showModal(); });
   document.querySelectorAll(".filters button").forEach((b) => b.addEventListener("click", () => {

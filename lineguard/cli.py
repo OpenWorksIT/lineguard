@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 OpenWorks IT (Pty) Ltd
-"""Command line: lineguard serve | open | process | demo | install-service | init-config"""
+"""Command line: lineguard serve | open | process | demo | export-data | install-service | hotspot | init-config"""
 from __future__ import annotations
 
 import argparse
@@ -168,6 +168,25 @@ def cmd_hotspot(s, args):
     return 0
 
 
+def cmd_export_data(s, args):
+    """Write the open data tables (Parquet, CSV, datapackage.json) into a folder, e.g. one that
+    OneDrive, SharePoint or a Databricks volume syncs. Run it from a timer to keep the folder fresh."""
+    from . import opendata
+    from .store import Store
+
+    if not s.db_path.exists():
+        print(f"No LineGuard data yet at {s.data_dir}")
+        return 1
+    formats = tuple(f.strip() for f in args.formats.split(",") if f.strip())
+    if not formats or any(f not in ("parquet", "csv") for f in formats):
+        print("--formats takes parquet, csv or parquet,csv")
+        return 1
+    out = Path(args.folder).expanduser()
+    written = opendata.write_folder(Store(s.db_path), s, out, formats)
+    print(f"Wrote {len(written)} files to {out}")
+    return 0
+
+
 def cmd_init_config(s, args):
     p = config.DEFAULT_CONFIG
     if p.exists():
@@ -197,6 +216,9 @@ def main(argv=None):
     p.add_argument("--seed", type=int, default=1)
     p.add_argument("--spans", type=int, default=5, help="100 m spans to simulate")
     p.add_argument("--out", help="write here instead of the inbox")
+    p = sub.add_parser("export-data", help="write flights, hotspots, history and revisits for Power BI, Databricks or Excel")
+    p.add_argument("folder", help="folder to write into (files are replaced each time)")
+    p.add_argument("--formats", default="parquet,csv", help="parquet, csv or parquet,csv (default)")
     p = sub.add_parser("install-service", help="install and start as a systemd user service (Linux)")
     p.add_argument("--share", action="store_true", help="let paired phones connect over Wi-Fi")
     p = sub.add_parser("hotspot", help="turn this laptop into a Wi-Fi hotspot for phones (NetworkManager)")
@@ -209,6 +231,6 @@ def main(argv=None):
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     s = config.load(args.config)
     fn = {"serve": cmd_serve, "open": cmd_open, "process": cmd_process, "demo": cmd_demo,
-          "install-service": cmd_install_service, "init-config": cmd_init_config,
+          "install-service": cmd_install_service, "init-config": cmd_init_config, "export-data": cmd_export_data,
           "hotspot": cmd_hotspot}[args.cmd]
     sys.exit(fn(s, args) or 0)

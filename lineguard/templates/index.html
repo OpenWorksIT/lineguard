@@ -18,6 +18,7 @@
   <div class="top-actions">
     <button type="button" class="quiet" id="phones-open">Connect a phone</button>
     <button type="button" class="quiet" id="towers-open">Tower list</button>
+    <button type="button" class="quiet" id="data-open">Data feed</button>
     <button type="button" id="add-open">Add a flight</button>
   </div>
 </header>
@@ -176,6 +177,26 @@
   </form>
   <p class="meta" id="towers-msg" role="status"></p>
   <ul id="tower-sources" class="device-list"></ul>
+</dialog>
+
+<dialog id="data-dialog" class="dialog">
+  <form method="dialog" class="dialog-close"><button aria-label="Close">×</button></form>
+  <h2>Data feed</h2>
+  <p>Every flight, hotspot, repair and revisit as tables for Power BI, Databricks, Excel or any database, in a documented open format (<a href="https://github.com/OpenWorksIT/lineguard/blob/main/docs/data-format.md" rel="noopener" target="_blank">format guide</a>).</p>
+  <p><a class="button-link" href="/export/data.zip" id="data-zip">Download all data (.zip)</a></p>
+  <h3>Live feed for reporting tools</h3>
+  <p class="meta">Give each reporting tool its own read-only key. A key can read these tables and nothing else: it can't log in, change hotspots or pair phones. Remove a key to cut that tool off.</p>
+  <p class="meta">Feed address: <code id="data-feed"></code><br>Tables: <span id="data-tables"></span>, each as <code>.parquet</code> or <code>.csv</code>.</p>
+  <form class="row-form" id="data-form">
+    <input id="data-name" maxlength="60" placeholder="Who will use it, e.g. Power BI asset team" aria-label="Key name" required>
+    <button type="submit">Make a key</button>
+  </form>
+  <div id="data-new" class="new-key" hidden>
+    <p><b>Copy this key now.</b> It is shown only once.</p>
+    <code id="data-key"></code>
+    <p class="meta">Power BI: Get data → Web, the table's address, Basic, user name <code>data</code>, password the key. Databricks: send it as <code>Authorization: Bearer</code>.</p>
+  </div>
+  <ul id="data-keys" class="device-list"></ul>
 </dialog>
 
 <footer class="foot">LineGuard {{ version }} by OpenWorks IT. Free software under the <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener">GNU AGPL v3</a>: <a href="{{ source_url }}" rel="noopener">source code</a>. Map and power data © OpenStreetMap contributors.</footer>

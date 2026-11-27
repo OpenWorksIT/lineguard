@@ -90,6 +90,12 @@ def test_pipeline_store_and_exports(flight, settings):
     assert hs and all((settings.crops_dir / h["thermal_crop"]).exists() for h in hs)
     store.update_hotspot(hs[0]["id"], status="repaired", note="re-torqued clamp")
     assert store.hotspot(hs[0]["id"])["status"] == "repaired"
+    # processing the flight again keeps each hotspot's identity, status and note
+    before = {h["uid"]: (h["status"], h["note"]) for h in store.hotspots(fid)}
+    process(store, settings, fid)
+    assert {h["uid"]: (h["status"], h["note"]) for h in store.hotspots(fid)} == before
+    assert not [e for e in store.events() if e["kind"] == "gone"]
+    hs = store.hotspots(fid)
     assert "<Placemark>" in exports.kml(f, hs)
     assert "<wpt" in exports.gpx(f, hs)
     assert exports.to_csv(f, hs).count("\n") == len(hs) + 1

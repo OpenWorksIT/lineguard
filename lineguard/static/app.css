@@ -99,6 +99,8 @@ button.small { padding: 0.2rem 0.6rem; font-size: 0.85rem; }
 .hotspots tbody tr:hover { background: #f7f9fc; }
 .hotspots tbody tr[aria-selected="true"] { background: #e9effa; }
 .hotspots .id { font-weight: 650; white-space: nowrap; }
+.hotspots .id .back { display: inline-block; margin-left: 0.4rem; font-size: 0.72rem; font-weight: 600; padding: 0.05rem 0.4rem;
+  border-radius: 1rem; color: var(--major, #d7263d); border: 1px solid currentColor; vertical-align: 1px; }
 .heat-col { width: 38%; }
 .heat { display: grid; grid-template-columns: 4.6rem 1fr; align-items: center; gap: 0.6rem; }
 .heat b { font-variant-numeric: tabular-nums; font-size: 1.02rem; }
@@ -147,6 +149,11 @@ figcaption { color: var(--muted); font-size: 0.8rem; margin-top: 0.2rem; }
 .dialog p { line-height: 1.5; }
 .dialog-close { position: absolute; top: 0.6rem; right: 0.8rem; }
 .dialog-close button { background: none; border: 0; color: var(--muted); font-size: 1.5rem; }
+.dialog h3 { font-size: 1rem; margin: 1.2rem 0 0.3rem; }
+.dialog code { font-size: 0.85rem; overflow-wrap: anywhere; }
+.new-key { border: 1px solid var(--fixed); border-radius: 8px; padding: 0.6rem 0.9rem; margin: 0.8rem 0; }
+#data-key { display: block; padding: 0.4rem 0; user-select: all; font-size: 0.95rem; }
+.button-link { display: inline-block; padding: 0.45rem 0.9rem; border-radius: 6px; background: var(--ink); color: #fff; text-decoration: none; }
 .row-form { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .row-form input { flex: 1; min-width: 14rem; font: inherit; padding: 0.45rem 0.6rem; border: 1px solid var(--rule); border-radius: var(--radius); }
 pre { background: #eef2f8; padding: 0.6rem 0.8rem; border-radius: var(--radius); }

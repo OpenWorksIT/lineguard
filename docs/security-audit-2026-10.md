@@ -113,3 +113,33 @@ Regression tests are in `test_pentest_round_two`.
 | App demo smoke test (built app in a browser) | Passed, no errors |
 
 The other open Dependabot PRs are major-version upgrades: actions/checkout 7, upload-artifact 7, download-artifact 8, setup-java 6, setup-python 7, Gradle 9, google-services 4.5, and the Python 3.15 Docker base image. They need a test build each, so they were left for a planned update rather than merged in a routine check.
+
+---
+
+# Data feed review, 27 November 2026 (LineGuard 0.4.0)
+
+LineGuard 0.4.0 adds a read-only data feed for reporting tools (`/api/data/v1/`), data keys to reach it, a data download, and a hotspot history. These are the checks on the new way in:
+
+| Area | How it is protected | Tested by |
+| --- | --- | --- |
+| Data keys | 32 random bytes, prefixed `lgd_`. Stored only as SHA-256 hashes. Shown once when made. Each key is named and can be removed from the dashboard. | `test_data_keys_read_the_feed_and_nothing_else` |
+| What a key opens | A key is only looked up for `/api/data/` paths, and only for the three feed endpoints there. Anything else gets 404 before any data is read. Everywhere else a data key is unknown (401). It can't open the dashboard, change a hotspot, list or pair phones, make keys or download exports. | Same test: every other route is tried with the key, as Bearer and as Basic |
+| Phone tokens | Not accepted on the feed. Phones can't make data keys. | Same test |
+| Methods | GET and HEAD only. | Same test |
+| Wrong keys | 10 failures per client address per 10 minutes, then 429, counted apart from dashboard logins. | Same test |
+| Other websites | Requests with a foreign `Origin` get 403. No CORS is granted to the feed. | Same test |
+| Spreadsheet formulas | Text starting with `=`, `+`, `-` or `@` is prefixed with `'` in CSV files. Parquet keeps the text as it is. | `test_files_load_in_other_tools` |
+| Old databases | Upgraded in place on start: permanent IDs, site ID and starting history. Running it twice changes nothing. | `test_old_database_gets_ids_and_history` |
+
+| Check | Result |
+| --- | --- |
+| `pip-audit` on the server's dependencies (now with pyarrow and tzdata) | No known vulnerabilities |
+| `bandit` (high severity) on `lineguard/` | Nothing found |
+| `bandit` (medium) on the changed files | Three B608 notes on SQL built from column names. All three are names from LineGuard's own code, never from a request; this pattern was already reviewed in round 1. |
+| Server tests | 16 passed |
+| Databricks notebook | Ran end to end on Spark 4.0.1: from the live feed with a data key, and from a two-site folder. |
+
+Deliberate choices:
+
+- **Hosted mode allows Basic authentication with the user name `data`.** The Power BI service only refreshes web sources with Anonymous, Basic, Windows or organisational credentials. A data key is long and random, so Basic carries no guessing risk, and Power BI keeps the key in its credential store, not in the report file.
+- **The dashboard login also opens the feed,** so the owner can check it in a browser. A laptop with no password serves the feed only to itself, unless a data key is used.

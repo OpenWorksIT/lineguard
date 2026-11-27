@@ -78,8 +78,10 @@ def process(store: Store, settings, fid: int) -> None:
 
         res = detect.analyse(photos, settings, progress)
         usable = [p for p in photos if p.pitch_deg <= settings.detection.min_nadir_pitch_deg]
+        before = store.hotspots(fid)   # from an earlier run of this same flight, if any
         store.clear_hotspots(fid)
         earlier = store.earlier_hotspots(fid)
+        carried = set()
         settings.crops_dir.mkdir(parents=True, exist_ok=True)
         for n, h in enumerate(res.hotspots):
             b = h.best
@@ -96,12 +98,21 @@ def process(store: Store, settings, fid: int) -> None:
                     cc.save(settings.crops_dir / f"{stem}_c.jpg", quality=88)
                     colour = f"{stem}_c.jpg"
             prev = _match_earlier(earlier, h.lat, h.lon, res.frame, settings.detection.history_radius_m)
+            # found again on reprocessing: keep its identity, status, note and history
+            same = _match_earlier([b for b in before if b["uid"] not in carried], h.lat, h.lon, res.frame,
+                                  settings.detection.history_radius_m)
+            keep = {}
+            if same:
+                carried.add(same["uid"])
+                keep = {k: same[k] for k in ("uid", "status", "note", "updated", "updated_by")}
             store.add_hotspot(
                 flight_id=fid, lat=h.lat, lon=h.lon, dt=round(h.dt, 2), severity=h.severity,
                 photos=h.photos, seen=h.seen, photo_name=photo.name,
                 thermal_crop=f"{stem}_t.png", colour_crop=colour,
-                prev_id=prev["id"] if prev else None, prev_dt=prev["dt"] if prev else None,
+                prev_id=prev["id"] if prev else None, prev_uid=prev["uid"] if prev else None,
+                prev_dt=prev["dt"] if prev else None, **keep,
             )
+        store.mark_gone([b["uid"] for b in before if b["uid"] not in carried])
         step = max(1, len(usable) // 200)
         track = [[round(p.lat, 7), round(p.lon, 7)] for p in usable[::step]]
         store.update_flight(
@@ -111,6 +122,7 @@ def process(store: Store, settings, fid: int) -> None:
             rejected=res.rejected, standoff_m=settings.detection.standoff_m,
             lat=float(np.mean([p.lat for p in usable])), lon=float(np.mean([p.lon for p in usable])),
             flown=usable[0].taken or "", track=json.dumps(track),
+            coverage=json.dumps([[round(p.lat, 7), round(p.lon, 7)] for p in usable], separators=(",", ":")),
         )
         log.info("flight %s done: %d hotspots", fid, len(res.hotspots))
         if res.hotspots:

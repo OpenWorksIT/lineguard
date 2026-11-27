@@ -68,6 +68,7 @@ class Settings:
     dev_origins: str = ""           # browser origins allowed to call the API (app development only)
     behind_proxy: bool = False      # hosted behind Caddy etc.: take the client address from X-Forwarded-For
     source_url: str = "https://github.com/OpenWorksIT/lineguard"  # where this version's source is (AGPL section 13)
+    camera_timezone: str = ""       # time zone the drone's clock is set to, e.g. "Africa/Johannesburg"; default: this computer's
     camera: Camera = field(default_factory=Camera)
     detection: Detection = field(default_factory=Detection)
 
@@ -150,6 +151,7 @@ def load(path: Path | None = None) -> Settings:
         "LINEGUARD_DEV_ORIGINS": ("dev_origins", str),
         "LINEGUARD_SOURCE_URL": ("source_url", str),
         "LINEGUARD_BEHIND_PROXY": ("behind_proxy", lambda v: v.strip().lower() in ("1", "true", "yes")),
+        "LINEGUARD_CAMERA_TIMEZONE": ("camera_timezone", str),
     }
     for var, (name, conv) in env.items():
         if os.environ.get(var):
@@ -163,6 +165,12 @@ def load(path: Path | None = None) -> Settings:
         raise SystemExit("Hosted mode needs LINEGUARD_PUBLIC_URL (the https:// address phones and browsers use).")
     if s.public_url and not s.public_url.startswith("https://"):
         raise SystemExit("LINEGUARD_PUBLIC_URL must start with https:// so phones connect securely.")
+    if s.camera_timezone:
+        try:
+            from zoneinfo import ZoneInfo
+            ZoneInfo(s.camera_timezone)
+        except Exception:
+            raise SystemExit(f"Unknown camera_timezone {s.camera_timezone!r}. Use a name such as Africa/Johannesburg.") from None
     if s.behind_proxy and not s.password:
         raise SystemExit("LINEGUARD_BEHIND_PROXY needs a password: only use it behind a proxy that requires one.")
     return s
@@ -178,6 +186,7 @@ EXAMPLE = """# LineGuard settings. Every line is optional.
 # share = true            # let paired phones connect over Wi-Fi (for driving to faults)
 # name = "Bakkie laptop"  # how this laptop shows up on phones
 # allowed_hosts = "bakkie-laptop.local"  # other names you open the dashboard by (IP addresses always work)
+# camera_timezone = "Africa/Johannesburg"  # the drone's clock; used to give every flight a UTC time
 
 [detection]
 # standoff_m = 20.0

@@ -20,7 +20,7 @@ import secrets
 import segno
 from flask import Flask, Response, abort, g, jsonify, render_template, request, send_from_directory
 
-from . import __version__, exports, osm, phones
+from . import __version__, exports, opendata, osm, phones
 from .store import Store
 
 # Where the phone app's web view runs. Native requests don't need CORS; these cover the web view itself.
@@ -73,6 +73,7 @@ def create_app(settings, store: Store, worker=None) -> Flask:
 
     login_fails = Limiter(10)
     pair_fails = Limiter(5)
+    data_fails = Limiter(10)
     extra_hosts = {h.strip().lower() for h in settings.allowed_hosts.split(",") if h.strip()}
     if settings.public_url:
         extra_hosts.add((urlsplit(settings.public_url).hostname or "").lower())
@@ -115,6 +116,8 @@ def create_app(settings, store: Store, worker=None) -> Flask:
         if request.method == "OPTIONS" or request.path in ("/healthz", "/privacy"):
             return None
         client = request.remote_addr or "?"
+        if request.path.startswith("/api/data/"):
+            return data_access(client)
         if request.path == "/api/pair":
             if pair_fails.blocked(client):
                 return jsonify(error="Too many wrong codes. Wait a few minutes, then try again."), 429
@@ -148,6 +151,42 @@ def create_app(settings, store: Store, worker=None) -> Flask:
             return None
         return Response("This LineGuard only accepts paired phones. Use the LineGuard app, or open the dashboard on the laptop itself.",
                         401, {"Content-Type": "text/plain; charset=utf-8"})
+
+    DATA_ENDPOINTS = {"data_table", "data_descriptor", "data_zip"}
+
+    def data_access(client):
+        """The data feed for reporting tools. A data key (Bearer, or Basic with user name "data") reads
+        the feed and nothing else; the dashboard login works too, so it can be tried in a browser."""
+        if request.url_rule is None or request.url_rule.endpoint not in DATA_ENDPOINTS:
+            abort(404)
+        if request.method not in ("GET", "HEAD"):
+            abort(405)
+        origin = request.headers.get("Origin", "")
+        if origin and not _own_origin(origin):
+            return Response("Requests from other websites aren't accepted.", 403)
+        if data_fails.blocked(client):
+            return Response("Too many wrong data keys. Wait ten minutes, then try again.", 429)
+        auth, header = request.authorization, request.headers.get("Authorization", "")
+        key = header[7:].strip() if header.startswith("Bearer ") else None
+        if key is None and auth is not None and auth.type == "basic" and auth.username == "data":
+            key = auth.password or ""
+        if key is not None:
+            row = store.data_key_by_hash(phones.token_hash(key)) if key else None
+            if row:
+                g.data_key, g.who = row, f"data key {row['name']}"
+                if not row["last_used"] or row["last_used"][:16] != time.strftime("%Y-%m-%dT%H:%M", time.gmtime()):
+                    store.touch_data_key(row["id"])
+                return None
+            data_fails.fail(client)
+        elif settings.password and _basic_ok(auth):
+            return None
+        elif not settings.password and request.remote_addr in LOOPBACK:
+            return None
+        elif auth is not None:
+            data_fails.fail(client)
+        return Response("A LineGuard data key is needed. Make one on the dashboard under Data feed.", 401,
+                        {"WWW-Authenticate": 'Basic realm="LineGuard data", charset="UTF-8"',
+                         "Content-Type": "text/plain; charset=utf-8"})
 
     def dashboard_only():
         if g.device is not None:
@@ -265,6 +304,7 @@ def create_app(settings, store: Store, worker=None) -> Flask:
             f["track"] = json.loads(f["track"] or "[]")
             f["has_power"] = bool(f.pop("power", ""))
             f.pop("folder", None)
+            f.pop("coverage", None)
             out.append(f)
         return jsonify(out)
 
@@ -332,10 +372,17 @@ def create_app(settings, store: Store, worker=None) -> Flask:
         store.delete_flight(fid)
         return jsonify(ok=True)
 
+    def with_history(hs):
+        """Add each hotspot's place in its spot's history: which sighting it is, and whether it came back after a repair."""
+        info = opendata.recurring_uids(store, settings) if hs else {}
+        for h in hs:
+            h.update(info.get(h["uid"], {}))
+        return hs
+
     @app.get("/api/flights/<int:fid>/hotspots")
     def hotspots(fid):
         flight_or_404(fid)
-        return jsonify(store.hotspots(fid))
+        return jsonify(with_history(store.hotspots(fid)))
 
     @app.get("/api/flights/<int:fid>/power")
     def power(fid):
@@ -431,10 +478,60 @@ def create_app(settings, store: Store, worker=None) -> Flask:
         return Response(fn(f, hs), mimetype=mime,
                         headers={"Content-Disposition": f'attachment; filename="lineguard_{safe}.{fmt}"'})
 
+    # ---- open data for Power BI, Databricks and the like (see docs/data-format.md)
+    DATA_TYPES = {"csv": "text/csv; charset=utf-8", "parquet": "application/vnd.apache.parquet"}
+
+    @app.get("/api/data/v1/<name>.<fmt>")
+    def data_table(name, fmt):
+        if name not in opendata.TABLES or fmt not in DATA_TYPES:
+            abort(404)
+        rows = opendata.build(store, settings, with_revisits=name == "revisits")[name]
+        body = opendata.to_csv(name, rows) if fmt == "csv" else opendata.to_parquet(name, rows)
+        return Response(body, content_type=DATA_TYPES[fmt],
+                        headers={"Content-Disposition": f'inline; filename="{name}.{fmt}"'})
+
+    @app.get("/api/data/v1/datapackage.json")
+    def data_descriptor():
+        from datetime import datetime, timezone
+        d = opendata.descriptor(datetime.now(timezone.utc).replace(microsecond=0))
+        return jsonify(d)
+
+    @app.get("/api/data/v1/lineguard-data.zip")
+    def data_zip():
+        return Response(opendata.package(store, settings), mimetype="application/zip",
+                        headers={"Content-Disposition": 'attachment; filename="lineguard-data.zip"'})
+
+    @app.get("/export/data.zip")
+    def export_data():
+        dashboard_only()
+        safe = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in settings.display_name)[:40]
+        return Response(opendata.package(store, settings), mimetype="application/zip",
+                        headers={"Content-Disposition": f'attachment; filename="lineguard-data_{safe}_{time.strftime("%Y-%m-%d")}.zip"'})
+
+    @app.get("/api/data-keys")
+    def data_keys():
+        dashboard_only()
+        base = settings.public_url.rstrip("/") if settings.public_url else request.host_url.rstrip("/")
+        return jsonify(keys=store.data_keys(), feed=f"{base}/api/data/v1/", tables=list(opendata.TABLES))
+
+    @app.post("/api/data-keys")
+    def new_data_key():
+        dashboard_only()
+        name = re.sub(r"[^\w .'-]", "", str((request.get_json(silent=True) or {}).get("name") or "Reporting"))[:60].strip() or "Reporting"
+        key = "lgd_" + secrets.token_urlsafe(32)
+        kid = store.add_data_key(name, phones.token_hash(key))
+        return jsonify(id=kid, name=name, key=key), 201
+
+    @app.delete("/api/data-keys/<int:kid>")
+    def remove_data_key(kid):
+        dashboard_only()
+        store.delete_data_key(kid)
+        return jsonify(ok=True)
+
     @app.get("/report/<int:fid>")
     def report(fid):
         f = flight_or_404(fid)
-        hs = [h for h in store.hotspots(fid) if h["status"] != "dismissed"]
+        hs = [h for h in with_history(store.hotspots(fid)) if h["status"] != "dismissed"]
         for h in hs:
             h["maps"] = exports.maps_link(h["lat"], h["lon"])
             h["where"] = osm.label(h)

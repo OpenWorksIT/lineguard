@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lineguard"
-version = "0.3.0"
+version = "0.4.0"
 description = "LineGuard: finds and maps hotspots on powerlines from radiometric drone photos. Runs offline."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -18,10 +18,12 @@ dependencies = [
     "Flask>=3.0",
     "waitress>=3.0",
     "segno>=1.5",
+    "pyarrow>=17",
+    "tzdata>=2024.1",
 ]
 
 [project.optional-dependencies]
-test = ["pytest>=7"]
+test = ["pytest>=7", "duckdb>=1.1", "frictionless>=5.18"]
 
 [project.scripts]
 lineguard = "lineguard.cli:main"
